@@ -69,8 +69,8 @@ export const useDashboardState = () => {
     // Check if this is a new teacher with no data
     const isNewTeacher = initialLoadComplete &&
       courses.length === 0 &&
-      dashboardStats.totalCourses === 0 &&
-      dashboardStats.totalStudents === 0 &&
+      (dashboardStats?.totalCourses ?? 0) === 0 &&
+      (dashboardStats?.totalStudents ?? 0) === 0 &&
       !coursesError &&
       !analyticsError;
 
@@ -97,8 +97,8 @@ export const useDashboardState = () => {
     isAnalyticsLoading,
     initialLoadComplete,
     courses.length,
-    dashboardStats.totalCourses,
-    dashboardStats.totalStudents,
+    dashboardStats?.totalCourses,
+    dashboardStats?.totalStudents,
     coursesError,
     analyticsError
   ]);

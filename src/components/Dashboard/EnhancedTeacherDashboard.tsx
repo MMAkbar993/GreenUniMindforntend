@@ -245,15 +245,15 @@ const EnhancedTeacherDashboard = () => {
     return (
       !isLoading &&
       courses.length === 0 &&
-      dashboardStats.totalStudents === 0 &&
-      dashboardStats.totalEarnings === 0 &&
+      (dashboardStats?.totalStudents ?? 0) === 0 &&
+      (dashboardStats?.totalEarnings ?? 0) === 0 &&
       !stripeStatus?.data?.isConnected
     );
   }, [
     isLoading,
     courses.length,
-    dashboardStats.totalStudents,
-    dashboardStats.totalEarnings,
+    dashboardStats?.totalStudents,
+    dashboardStats?.totalEarnings,
     stripeStatus?.data?.isConnected,
   ]);
 
@@ -291,85 +291,85 @@ const EnhancedTeacherDashboard = () => {
     () => [
       {
         title: 'Total Courses',
-        value: dashboardState.stats.totalCourses.toString(),
+        value: (dashboardState.stats?.totalCourses ?? 0).toString(),
         icon: <BookOpen className="w-6 h-6" />,
-        change: `${dashboardStats.publishedCourses} published, ${dashboardStats.draftCourses} drafts`,
-        trend: dashboardStats.coursesGrowth >= 0 ? 'up' : 'down',
-        percentage: `${dashboardStats.coursesGrowth >= 0 ? '+' : ''}${
-          dashboardStats.coursesGrowth
+        change: `${dashboardStats?.publishedCourses ?? 0} published, ${dashboardStats?.draftCourses ?? 0} drafts`,
+        trend: (dashboardStats?.coursesGrowth ?? 0) >= 0 ? 'up' : 'down',
+        percentage: `${(dashboardStats?.coursesGrowth ?? 0) >= 0 ? '+' : ''}${
+          dashboardStats?.coursesGrowth ?? 0
         }%`,
         color: 'bg-brand-primary',
         lightColor: 'bg-brand-accent',
         textColor: 'text-brand-primary',
-        realTimeValue: dashboardState.stats.totalCourses,
+        realTimeValue: dashboardState.stats?.totalCourses ?? 0,
       },
       {
         title: 'Total Students',
-        value: dashboardState.stats.totalStudents.toLocaleString(),
+        value: (dashboardState.stats?.totalStudents ?? 0).toLocaleString(),
         icon: <Users className="w-6 h-6" />,
-        change: `+${dashboardStats.newStudentsThisMonth} this month`,
-        trend: dashboardStats.studentsGrowth >= 0 ? 'up' : 'down',
+        change: `+${dashboardStats?.newStudentsThisMonth ?? 0} this month`,
+        trend: (dashboardStats?.studentsGrowth ?? 0) >= 0 ? 'up' : 'down',
         percentage: `${
-          dashboardStats.studentsGrowth >= 0 ? '+' : ''
-        }${dashboardStats.studentsGrowth.toFixed(1)}%`,
+          (dashboardStats?.studentsGrowth ?? 0) >= 0 ? '+' : ''
+        }${(dashboardStats?.studentsGrowth ?? 0).toFixed(1)}%`,
         color: 'bg-brand-secondary',
         lightColor: 'bg-green-50',
         textColor: 'text-brand-secondary',
-        realTimeValue: dashboardState.stats.totalStudents,
+        realTimeValue: dashboardState.stats?.totalStudents ?? 0,
       },
       {
         title: 'Total Earnings',
-        value: `$${dashboardState.stats.totalEarnings.toLocaleString()}`,
+        value: `$${(dashboardState.stats?.totalEarnings ?? 0).toLocaleString()}`,
         icon: <DollarSign className="w-6 h-6" />,
-        change: `$${dashboardStats.monthlyEarnings.toLocaleString()} this month`,
-        trend: dashboardStats.earningsGrowth >= 0 ? 'up' : 'down',
+        change: `$${(dashboardStats?.monthlyEarnings ?? 0).toLocaleString()} this month`,
+        trend: (dashboardStats?.earningsGrowth ?? 0) >= 0 ? 'up' : 'down',
         percentage: `${
-          dashboardStats.earningsGrowth >= 0 ? '+' : ''
-        }${dashboardStats.earningsGrowth.toFixed(1)}%`,
+          (dashboardStats?.earningsGrowth ?? 0) >= 0 ? '+' : ''
+        }${(dashboardStats?.earningsGrowth ?? 0).toFixed(1)}%`,
         color: 'bg-yellow-500',
         lightColor: 'bg-yellow-50',
         textColor: 'text-yellow-600',
-        realTimeValue: dashboardState.stats.totalEarnings,
+        realTimeValue: dashboardState.stats?.totalEarnings ?? 0,
       },
       {
         title: 'Course Rating',
-        value: `${dashboardStats.avgRating.toFixed(1)}/5`,
+        value: `${(dashboardStats?.avgRating ?? 0).toFixed(1)}/5`,
         icon: <Star className="w-6 h-6" />,
-        change: `${dashboardStats.totalReviews} total reviews`,
-        trend: dashboardStats.ratingGrowth >= 0 ? 'up' : 'down',
-        percentage: `${dashboardStats.ratingGrowth >= 0 ? '+' : ''}${dashboardStats.ratingGrowth}%`,
+        change: `${dashboardStats?.totalReviews ?? 0} total reviews`,
+        trend: (dashboardStats?.ratingGrowth ?? 0) >= 0 ? 'up' : 'down',
+        percentage: `${(dashboardStats?.ratingGrowth ?? 0) >= 0 ? '+' : ''}${dashboardStats?.ratingGrowth ?? 0}%`,
         color: 'bg-purple-500',
         lightColor: 'bg-purple-50',
         textColor: 'text-purple-600',
       },
       {
         title: 'Total Lectures',
-        value: dashboardState.stats.totalLectures.toString(),
+        value: (dashboardState.stats?.totalLectures ?? 0).toString(),
         icon: <PlayCircle className="w-6 h-6" />,
         change: 'Across all courses',
-        trend: dashboardStats.coursesGrowth >= 0 ? 'up' : 'down',
+        trend: (dashboardStats?.coursesGrowth ?? 0) >= 0 ? 'up' : 'down',
         percentage: `${
-          dashboardStats.coursesGrowth >= 0 ? '+' : ''
-        }${dashboardStats.coursesGrowth.toFixed(1)}%`,
+          (dashboardStats?.coursesGrowth ?? 0) >= 0 ? '+' : ''
+        }${(dashboardStats?.coursesGrowth ?? 0).toFixed(1)}%`,
         color: 'bg-indigo-500',
         lightColor: 'bg-indigo-50',
         textColor: 'text-indigo-600',
-        realTimeValue: dashboardState.stats.totalLectures,
+        realTimeValue: dashboardState.stats?.totalLectures ?? 0,
       },
       {
         title: 'Performance Score',
-        value: dashboardStats.performanceScore,
+        value: dashboardStats?.performanceScore ?? 'N/A',
         icon: <Award className="w-6 h-6" />,
         change: 'Based on student feedback',
         trend:
-          dashboardStats.performanceScore === 'Excellent' ||
-          dashboardStats.performanceScore === 'Good'
+          dashboardStats?.performanceScore === 'Excellent' ||
+          dashboardStats?.performanceScore === 'Good'
             ? 'up'
             : 'down',
         percentage:
-          dashboardStats.performanceScore === 'Excellent'
+          dashboardStats?.performanceScore === 'Excellent'
             ? '+5%'
-            : dashboardStats.performanceScore === 'Good'
+            : dashboardStats?.performanceScore === 'Good'
             ? '+2%'
             : '0%',
         color: 'bg-emerald-500',
@@ -383,7 +383,7 @@ const EnhancedTeacherDashboard = () => {
   // Enhanced loading state with better UX
   if (
     isInitialLoad &&
-    (isUserLoading || (isLoading && !coursesData && !dashboardStats.totalCourses))
+    (isUserLoading || (isLoading && !coursesData && !(dashboardStats?.totalCourses ?? 0)))
   ) {
     return <EnhancedDashboardSkeleton />;
   }
@@ -458,7 +458,7 @@ const EnhancedTeacherDashboard = () => {
                     <div className={cn('w-2 h-2 rounded-full animate-pulse', 'bg-green-500')} />
                     <span className="text-xs text-gray-500 font-medium">Live Updates</span>
                     <span className="text-xs text-gray-400 hidden sm:inline">
-                      • Updated {dashboardState.stats.lastUpdated.toLocaleTimeString()}
+                      • Updated {dashboardState.stats?.lastUpdated?.toLocaleTimeString() ?? '—'}
                     </span>
                   </div>
                 </div>
@@ -516,10 +516,10 @@ const EnhancedTeacherDashboard = () => {
               <DashboardErrorBoundary section="analytics">
                 <ModernStatsGrid
                   stats={{
-                    totalCourses: dashboardState.stats.totalCourses,
-                    totalStudents: dashboardState.stats.totalStudents,
-                    totalEarnings: dashboardState.stats.totalEarnings,
-                    totalLectures: dashboardState.stats.totalLectures,
+                    totalCourses: dashboardState.stats?.totalCourses ?? 0,
+                    totalStudents: dashboardState.stats?.totalStudents ?? 0,
+                    totalEarnings: dashboardState.stats?.totalEarnings ?? 0,
+                    totalLectures: dashboardState.stats?.totalLectures ?? 0,
                     avgRating: dashboardStats?.avgRating || 0,
                     totalReviews: dashboardStats?.totalReviews || 0,
                     publishedCourses: dashboardStats?.publishedCourses || 0,

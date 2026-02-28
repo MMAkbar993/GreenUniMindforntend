@@ -92,17 +92,39 @@ export const useDashboardAnalytics = () => {
       };
     }
 
-    const summary = dashboardSummary.data.overview;
+    const summary = dashboardSummary.data?.overview;
     const enrollment = enrollmentData.data;
     const revenue = revenueData.data;
     const performance = performanceData.data;
 
+    // Guard against missing overview (e.g. new teacher, API shape change)
+    if (!summary) {
+      return {
+        totalCourses: 0,
+        publishedCourses: 0,
+        draftCourses: 0,
+        totalStudents: 0,
+        totalEarnings: 0,
+        avgRating: 0,
+        monthlyEarnings: 0,
+        completionRate: 0,
+        newStudentsThisMonth: 0,
+        totalReviews: 0,
+        coursesGrowth: 0,
+        studentsGrowth: 0,
+        earningsGrowth: 0,
+        ratingGrowth: 0,
+        completionRateGrowth: 0,
+        performanceScore: 'Average',
+      };
+    }
+
     // Calculate performance score based on multiple metrics
     const getPerformanceScore = () => {
-      const ratingScore = (summary.averageRating / 5) * 100;
-      const completionScore = performance.courseCompletionRate;
-      const retentionScore = performance.studentRetentionRate;
-      const satisfactionScore = performance.studentSatisfactionScore;
+      const ratingScore = ((summary.averageRating ?? 0) / 5) * 100;
+      const completionScore = performance?.courseCompletionRate ?? 0;
+      const retentionScore = performance?.studentRetentionRate ?? 0;
+      const satisfactionScore = performance?.studentSatisfactionScore ?? 0;
 
       const overallScore = (ratingScore + completionScore + retentionScore + satisfactionScore) / 4;
 
@@ -113,21 +135,21 @@ export const useDashboardAnalytics = () => {
     };
 
     return {
-      totalCourses: summary.totalCourses,
-      publishedCourses: Math.floor(summary.totalCourses * 0.8), // Estimate based on typical ratios
-      draftCourses: Math.floor(summary.totalCourses * 0.2),
-      totalStudents: summary.totalStudents,
-      totalEarnings: summary.totalRevenue,
-      avgRating: summary.averageRating,
-      monthlyEarnings: revenue.revenueByPeriod.monthly,
-      completionRate: Math.round(performance.courseCompletionRate),
-      newStudentsThisMonth: enrollment.newEnrollments,
-      totalReviews: performance.totalReviews,
-      coursesGrowth: revenue.coursesGrowth || 0, // Dynamic from trend analysis
-      studentsGrowth: enrollment.growthRate || 0,
-      earningsGrowth: revenue.revenueGrowth || 0,
-      ratingGrowth: performance.ratingGrowth || 0, // Dynamic from rating trend analysis
-      completionRateGrowth: performance.completionRateGrowth || 0, // Dynamic from completion rate trends
+      totalCourses: summary.totalCourses ?? 0,
+      publishedCourses: Math.floor((summary.totalCourses ?? 0) * 0.8), // Estimate based on typical ratios
+      draftCourses: Math.floor((summary.totalCourses ?? 0) * 0.2),
+      totalStudents: summary.totalStudents ?? 0,
+      totalEarnings: summary.totalRevenue ?? 0,
+      avgRating: summary.averageRating ?? 0,
+      monthlyEarnings: revenue?.revenueByPeriod?.monthly ?? 0,
+      completionRate: Math.round(performance?.courseCompletionRate ?? 0),
+      newStudentsThisMonth: enrollment?.newEnrollments ?? 0,
+      totalReviews: performance?.totalReviews ?? 0,
+      coursesGrowth: revenue?.coursesGrowth ?? 0, // Dynamic from trend analysis
+      studentsGrowth: enrollment?.growthRate ?? 0,
+      earningsGrowth: revenue?.revenueGrowth ?? 0,
+      ratingGrowth: performance?.ratingGrowth ?? 0, // Dynamic from rating trend analysis
+      completionRateGrowth: performance?.completionRateGrowth ?? 0, // Dynamic from completion rate trends
       performanceScore: getPerformanceScore(),
     };
   }, [dashboardSummary, enrollmentData, revenueData, performanceData, engagementData]);
