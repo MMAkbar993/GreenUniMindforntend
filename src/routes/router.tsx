@@ -50,9 +50,9 @@ import CoursePage from "@/pages/Student/CoursePage";
 import LecturePage from "@/pages/Student/LecturePage";
 import PublicRoute from "@/components/layouts/PublicRoutes";
 import CourseDetails from "@/pages/CourseDetails";
-import CheckoutPage from "@/pages/payment/CheckoutPage";
+import CheckoutPage from "@/pages/Payment/CheckoutPage";
 import PaymentSuccess from "@/pages/Payment/PaymentSuccess";
-import CancelPage from "@/pages/payment/CancelPage";
+import PaymentCancel from "@/pages/Payment/PaymentCancel";
 import EditCourse from "@/pages/Teacher/EditCourse";
 import About from "@/pages/About";
 import Contact from "@/pages/Contact";
@@ -188,7 +188,7 @@ const router = createBrowserRouter([
         path: "/payment/cancel",
         element: (
           <ProtectedRoute role={USER_ROLE.STUDENT}>
-            <CancelPage />
+            <PaymentCancel />
           </ProtectedRoute>
         ),
       },
