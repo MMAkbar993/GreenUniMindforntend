@@ -7,22 +7,34 @@ import { Environment } from '@/utils/environment';
 import { config } from '@/config';
 
 /**
+ * Extract origin (scheme + host) from URL for CSP connect-src.
+ * Using origin (no path) ensures all API paths are allowed.
+ */
+const getOrigin = (url: string): string => {
+  try {
+    const u = new URL(url);
+    return u.origin;
+  } catch {
+    return url.replace(/\/api.*$/, '').replace(/\/+$/, '');
+  }
+};
+
+/**
  * Get backend URLs for CSP configuration
  */
 const getBackendUrls = (): string[] => {
   const urls: string[] = [];
 
-  // Add configured API base URL
+  // Add configured API base URL (use origin for CSP - allows all paths under that host)
   if (config.apiBaseUrl) {
-    // Extract base URL without /api/v1 path
-    const baseUrl = config.apiBaseUrl.replace(/\/api\/v1$/, '');
-    urls.push(baseUrl);
+    urls.push(getOrigin(config.apiBaseUrl));
   }
 
   // Add keep-alive backend URL
   const keepAliveUrl = import.meta.env.VITE_BACKEND_URL || 'https://green-uni-mind-backend-oxpo.onrender.com';
-  if (keepAliveUrl && !urls.includes(keepAliveUrl)) {
-    urls.push(keepAliveUrl);
+  if (keepAliveUrl) {
+    const origin = getOrigin(keepAliveUrl);
+    if (!urls.includes(origin)) urls.push(origin);
   }
 
   // Add common development URLs
@@ -34,17 +46,18 @@ const getBackendUrls = (): string[] => {
       'http://127.0.0.1:3000'
     ];
     devUrls.forEach(url => {
-      if (!urls.includes(url)) {
-        urls.push(url);
-      }
+      if (!urls.includes(url)) urls.push(url);
     });
   }
 
-  // Add production backend URL
-  const prodUrl = 'https://green-uni-mind-backend-oxpo.onrender.com';
-  if (!urls.includes(prodUrl)) {
-    urls.push(prodUrl);
-  }
+  // Add production backend URLs (Vercel + Render)
+  const prodUrls = [
+    'https://green-uni-mindbackend.vercel.app',
+    'https://green-uni-mind-backend-oxpo.onrender.com',
+  ];
+  prodUrls.forEach(url => {
+    if (!urls.includes(url)) urls.push(url);
+  });
 
   return urls;
 };
