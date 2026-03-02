@@ -67,7 +67,8 @@ const getBackendUrl = () => {
                        window.location.hostname === 'localhost';
 
   if (isDevelopment) {
-    return 'http://localhost:5000'; // Local backend for development
+    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+    return apiBase.replace(/\/api\/?$/, '');
   }
 
   return import.meta.env.VITE_BACKEND_URL || 'https://green-uni-mind-backend-oxpo.onrender.com';

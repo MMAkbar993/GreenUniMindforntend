@@ -38,13 +38,14 @@ export const useMedia = () => {
   const [bytesUploaded, setBytesUploaded] = useState<number>(0);
   const [totalBytes, setTotalBytes] = useState<number>(0);
 
-  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-  const uploadPreset = import.meta.env.VITE_CLOUDINARY_PRESET;
-  const apiKey = import.meta.env.VITE_CLOUDINARY_API_KEY;
-  const apiSecret = import.meta.env.VITE_CLOUDINARY_API_SECRET;
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || '';
+  const uploadPreset = import.meta.env.VITE_CLOUDINARY_PRESET || '';
+  const apiKey = import.meta.env.VITE_CLOUDINARY_API_KEY || '';
+  const apiSecret = import.meta.env.VITE_CLOUDINARY_API_SECRET || '';
 
-  if (!cloudName || !uploadPreset || !apiKey || !apiSecret) {
-    throw new Error("Missing Cloudinary environment variables");
+  const isConfigured = !!(cloudName && uploadPreset && apiKey && apiSecret);
+  if (!isConfigured) {
+    console.warn("Cloudinary environment variables not fully configured. Media uploads will not work. Set VITE_CLOUDINARY_CLOUD_NAME, VITE_CLOUDINARY_PRESET, VITE_CLOUDINARY_API_KEY, VITE_CLOUDINARY_API_SECRET in .env");
   }
 
   // Initialize web worker for video uploads
@@ -118,6 +119,9 @@ export const useMedia = () => {
     resourceType: MediaType,
     useAdaptiveStreaming: boolean = false
   ): Promise<CloudinaryUploadResponse> => {
+    if (!isConfigured) {
+      return Promise.reject(new Error("Cloudinary is not configured. Please set VITE_CLOUDINARY_CLOUD_NAME, VITE_CLOUDINARY_PRESET, VITE_CLOUDINARY_API_KEY, and VITE_CLOUDINARY_API_SECRET in your .env file."));
+    }
     // For video uploads with adaptive streaming, use the web worker
     if (resourceType === 'video' && useAdaptiveStreaming && workerRef.current) {
       return new Promise((resolve, reject) => {
