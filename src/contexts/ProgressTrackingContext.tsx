@@ -1,5 +1,13 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import { config } from '@/config';
 // import { toast } from 'sonner'; // Reserved for future notifications
+
+const getAuthHeaders = (): Record<string, string> => {
+  const token = localStorage.getItem('accessToken');
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+};
 
 interface LectureProgress {
   lectureId: string;
@@ -285,29 +293,37 @@ export const ProgressTrackingProvider: React.FC<ProgressTrackingProviderProps> =
     try {
       dispatch({ type: 'SET_SYNC_STATUS', payload: 'pending' });
 
-      // TODO: Implement progress sync endpoint on backend
-      // For now, just mark as synced to avoid 404 errors
-      console.log('Progress sync temporarily disabled - backend endpoint not implemented');
+      const coursesMap = state.courses;
+      const courseIds = Object.keys(coursesMap);
+
+      for (const courseId of courseIds) {
+        const course = coursesMap[courseId];
+        if (!course?.lectures) continue;
+
+        for (const [lectureId, lectureProgress] of Object.entries(course.lectures)) {
+          try {
+            await fetch(`${config.apiBaseUrl}/lectures/${lectureId}/progress`, {
+              method: 'PUT',
+              headers: getAuthHeaders(),
+              credentials: 'include',
+              body: JSON.stringify({
+                currentTime: lectureProgress.currentTime,
+                duration: lectureProgress.duration,
+                completionPercentage: lectureProgress.completionPercentage,
+                isCompleted: lectureProgress.isCompleted,
+                watchTime: lectureProgress.watchTime,
+                lastUpdated: lectureProgress.lastUpdated instanceof Date
+                  ? lectureProgress.lastUpdated.toISOString()
+                  : lectureProgress.lastUpdated,
+              }),
+            });
+          } catch {
+            // Individual lecture sync failure is non-critical
+          }
+        }
+      }
+
       dispatch({ type: 'SYNC_COMPLETED', payload: new Date() });
-
-      // Uncomment when backend endpoint is ready:
-      // const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-      // const response = await fetch(`${apiBaseUrl}/progress/sync`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   credentials: 'include',
-      //   body: JSON.stringify({ courses: state.courses }),
-      // });
-
-      // if (response.ok) {
-      //   const serverData = await response.json();
-      //   if (serverData.courses) {
-      //     dispatch({ type: 'BULK_UPDATE_PROGRESS', payload: serverData.courses });
-      //   }
-      //   dispatch({ type: 'SYNC_COMPLETED', payload: new Date() });
-      // } else {
-      //   throw new Error('Sync failed');
-      // }
     } catch (error) {
       dispatch({ type: 'SET_SYNC_STATUS', payload: 'error' });
       console.error('Sync error:', error);
@@ -343,14 +359,55 @@ export const ProgressTrackingProvider: React.FC<ProgressTrackingProviderProps> =
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
 
-      // This would be replaced with actual API call
-      const response = await fetch(`/api/courses/${courseId}/progress`, {
-        credentials: 'include',
-      });
+      const userId = (() => {
+        try {
+          const userData = localStorage.getItem('userData');
+          if (userData) return JSON.parse(userData)?._id;
+          return null;
+        } catch { return null; }
+      })();
+
+      if (!userId) {
+        dispatch({ type: 'SET_LOADING', payload: false });
+        return;
+      }
+
+      const response = await fetch(
+        `${config.apiBaseUrl}/students/${userId}/course-progress/${courseId}`,
+        { headers: getAuthHeaders(), credentials: 'include' }
+      );
 
       if (response.ok) {
-        const courseProgress = await response.json();
-        dispatch({ type: 'LOAD_COURSE_PROGRESS', payload: courseProgress });
+        const result = await response.json();
+        if (result.success && result.data) {
+          const serverData = result.data;
+          const courseProgress: CourseProgress = {
+            courseId,
+            totalLectures: serverData.totalLectures || 0,
+            completedLectures: (serverData.completedLectures || []).length,
+            totalDuration: serverData.totalDuration || 0,
+            watchedDuration: serverData.watchedDuration || 0,
+            overallProgress: serverData.progress || 0,
+            lastAccessed: new Date(serverData.lastAccessed || Date.now()),
+            lectures: (serverData.lectureProgress || []).reduce(
+              (acc: Record<string, LectureProgress>, lp: any) => {
+                acc[lp.lectureId] = {
+                  lectureId: lp.lectureId,
+                  courseId,
+                  currentTime: lp.currentTime || 0,
+                  duration: lp.duration || 0,
+                  completionPercentage: lp.completionPercentage || 0,
+                  lastUpdated: new Date(lp.lastUpdated || Date.now()),
+                  isCompleted: lp.isCompleted || false,
+                  watchTime: lp.watchTime || 0,
+                };
+                return acc;
+              },
+              {} as Record<string, LectureProgress>
+            ),
+          };
+          dispatch({ type: 'LOAD_COURSE_PROGRESS', payload: courseProgress });
+        }
       }
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: 'Failed to load course progress' });

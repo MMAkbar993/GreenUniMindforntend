@@ -289,11 +289,14 @@ export const useFinancialDataExport = () => {
     
     try {
       // This would call your backend API to generate and download the export
-      const response = await fetch(`/api/export/${type}?format=${format}`, {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      const response = await fetch(`${apiBaseUrl}/payments/export/${type}?format=${format}`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
+        credentials: 'include',
       });
 
       if (!response.ok) {

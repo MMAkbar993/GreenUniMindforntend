@@ -1,5 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
+import { config } from '@/config';
+
+const getAuthHeaders = (): Record<string, string> => {
+  const token = localStorage.getItem('accessToken');
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+};
 
 interface ProgressData {
   lectureId: string;
@@ -71,8 +79,8 @@ const useProgressTracking = (
         // Try to load from server
         if (navigator.onLine) {
           try {
-            // This would be replaced with actual API call
-            const response = await fetch(`/api/lectures/${lectureId}/progress`, {
+            const response = await fetch(`${config.apiBaseUrl}/lectures/${lectureId}/progress`, {
+              headers: getAuthHeaders(),
               credentials: 'include',
             });
             
@@ -277,11 +285,9 @@ const useProgressTracking = (
     }
 
     try {
-      const response = await fetch(`/api/lectures/${lectureId}/progress`, {
+      const response = await fetch(`${config.apiBaseUrl}/lectures/${lectureId}/progress`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify({
           currentTime: progressData.currentTime,

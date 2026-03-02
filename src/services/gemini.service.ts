@@ -5,9 +5,11 @@ class GeminiService {
   private model: any;
 
   constructor() {
-    // Use the API key from user's memory
-    const apiKey = 'AIzaSyDP_EbWxdRm0R9qEFU2KXwpRoDppCRAaiw';
-    this.genAI = new GoogleGenerativeAI(apiKey);
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+      console.warn('VITE_GEMINI_API_KEY is not set. AI features will not work.');
+    }
+    this.genAI = new GoogleGenerativeAI(apiKey || '');
     this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
   }
 

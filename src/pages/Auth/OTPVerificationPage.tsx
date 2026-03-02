@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "@/utils/toast";
+import { config } from "@/config";
 import { Mail, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,7 +54,7 @@ const OTPVerificationPage = () => {
     if (!email) return;
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/rate-limit-status?email=${encodeURIComponent(email)}`);
+      const response = await fetch(`${config.apiBaseUrl}/auth/rate-limit-status?email=${encodeURIComponent(email)}`);
       const data = await response.json();
 
       if (data.success) {
