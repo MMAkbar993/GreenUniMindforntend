@@ -24,10 +24,7 @@ const LectureCreate = () => {
   const dispatch = useAppDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Media upload hooks (video, audio, PDF)
-  const { uploadMedia: uploadVideo } = useMedia();
-  const { uploadMedia: uploadAudio } = useMedia();
-  const { uploadMedia: uploadPdf } = useMedia();
+  const { uploadMedia } = useMedia();
 
   // Get course data for context
   const { data: courseData } = useGetCourseByIdQuery(courseId || "", {
@@ -58,10 +55,11 @@ const LectureCreate = () => {
       let audioUrl = "";
       let pdfUrl = "";
 
-      // Video upload (optional) with adaptive streaming
+      // Video upload (optional); third arg = Cloudinary streaming_profile (slower when true)
       if (data.videoFile) {
+        const useAdaptive = data.videoAdaptiveStreaming !== false;
         uploadPromises.push(
-          uploadVideo(data.videoFile, undefined, true).then((response) => {
+          uploadMedia(data.videoFile, undefined, useAdaptive).then((response) => {
             if (!response?.secure_url) throw new Error("Video upload failed - no URL received");
             videoUrl = response.secure_url;
             videoDuration = response?.duration ?? videoDuration;
@@ -77,7 +75,7 @@ const LectureCreate = () => {
       // Audio upload (optional) – stored as raw on Cloudinary
       if (data.audioFile) {
         uploadPromises.push(
-          uploadAudio(data.audioFile).then((response) => {
+          uploadMedia(data.audioFile).then((response) => {
             if (response?.secure_url) audioUrl = response.secure_url;
           })
         );
@@ -86,7 +84,7 @@ const LectureCreate = () => {
       // PDF upload (optional)
       if (data.pdfFile) {
         uploadPromises.push(
-          uploadPdf(data.pdfFile).then((response) => {
+          uploadMedia(data.pdfFile).then((response) => {
             if (response?.secure_url) pdfUrl = response.secure_url;
           })
         );

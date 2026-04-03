@@ -31,6 +31,8 @@ import {
   FormDescription,
 } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { formatBytes } from '@/utils/uploadMedia';
@@ -65,6 +67,8 @@ interface LectureFormProps {
     audioFile?: File | null;
     pdfFile?: File | null;
     videoDuration?: number;
+    /** When false, skips Cloudinary streaming_profile (faster upload, no HLS prep). Default true. */
+    videoAdaptiveStreaming?: boolean;
   }) => Promise<void>;
   isSubmitting?: boolean;
   onCancel?: () => void;
@@ -91,6 +95,7 @@ const LectureForm: React.FC<LectureFormProps> = ({
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress>({ video: 0, audio: 0, pdf: 0 });
   const [videoDuration, setVideoDuration] = useState<number>(0);
+  const [videoAdaptiveStreaming, setVideoAdaptiveStreaming] = useState(true);
 
   const form = useForm<LectureFormValues>({
     resolver: zodResolver(lectureSchema),
@@ -201,6 +206,7 @@ const LectureForm: React.FC<LectureFormProps> = ({
         audioFile,
         pdfFile,
         videoDuration,
+        videoAdaptiveStreaming,
       });
     } catch (error) {
       console.error('Form submission error:', error);
@@ -331,6 +337,23 @@ const LectureForm: React.FC<LectureFormProps> = ({
                   <div className="flex items-center gap-2">
                     <Video className="h-4 w-4" />
                     <span className="font-medium">Video (Optional)</span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="video-adaptive-streaming" className="text-sm font-medium">
+                        HD adaptive streaming (HLS)
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        On: Cloudinary prepares HD streaming (slower). Off: faster upload; single progressive file.
+                      </p>
+                    </div>
+                    <Switch
+                      id="video-adaptive-streaming"
+                      checked={videoAdaptiveStreaming}
+                      onCheckedChange={setVideoAdaptiveStreaming}
+                      disabled={isSubmitting}
+                    />
                   </div>
 
                   {!videoFile && !initialData?.videoUrl ? (

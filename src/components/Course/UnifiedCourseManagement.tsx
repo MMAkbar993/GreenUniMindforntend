@@ -23,6 +23,7 @@ import {
   SortAsc,
   SortDesc,
   Calendar,
+  Rocket,
 } from "lucide-react";
 
 // UI Components
@@ -73,6 +74,7 @@ import { useGetMeQuery } from "@/redux/features/auth/authApi";
 import {
   useGetCoursesQuery,
   useDeleteCourseMutation,
+  useEditCourseMutation,
   Course,
 } from "@/redux/features/course/courseApi";
 import {
@@ -93,6 +95,7 @@ import {
   setLectures,
   removeCourse,
   removeLecture,
+  updateCourse,
 } from "@/redux/features/course/unifiedCourseSlice";
 
 // Utils
@@ -194,6 +197,7 @@ const UnifiedCourseManagement: React.FC<UnifiedCourseManagementProps> = ({
   const [lectureUpdateInProgress, setLectureUpdateInProgress] = useState(false);
   const [updateSuccessMessage, setUpdateSuccessMessage] = useState<string | null>(null);
   const [pendingLectureId, setPendingLectureId] = useState<string | null>(null);
+  const [publishingCourseId, setPublishingCourseId] = useState<string | null>(null);
 
   // Clear success message after delay
   useEffect(() => {
@@ -224,6 +228,7 @@ const UnifiedCourseManagement: React.FC<UnifiedCourseManagementProps> = ({
 
   // Mutations
   const [deleteCourse] = useDeleteCourseMutation();
+  const [editCourse] = useEditCourseMutation();
   const [deleteLecture] = useDeleteLectureMutation();
   const [updateLectureOrder] = useUpdateLectureOrderMutation();
 
@@ -412,6 +417,45 @@ const UnifiedCourseManagement: React.FC<UnifiedCourseManagementProps> = ({
   const handleEditCourse = (course: Course) => {
     dispatch(setEditingCourse(course));
     navigate(`/teacher/courses/edit-course/${course._id}`);
+  };
+
+  const handlePublishCourse = async (course: Course) => {
+    if (course.isPublished || course.status === "published") {
+      return;
+    }
+    if (getLectureCount(course) < 1) {
+      toast.error("Add at least one lecture before publishing.");
+      return;
+    }
+    setPublishingCourseId(course._id);
+    try {
+      const fd = new FormData();
+      fd.append("status", "published");
+      const result = await editCourse({
+        id: course._id,
+        data: fd,
+        creatorId: teacherId || undefined,
+      }).unwrap();
+      const updated = result.data;
+      dispatch(updateCourse(updated));
+      if (selectedCourse?._id === course._id) {
+        dispatch(setSelectedCourse(updated));
+      }
+      toast.success("Course published. Students can now find and enroll in it.");
+    } catch (error: unknown) {
+      const msg =
+        error &&
+        typeof error === "object" &&
+        "data" in error &&
+        (error as { data?: { message?: string } }).data?.message
+          ? (error as { data: { message: string } }).data.message
+          : error instanceof Error
+            ? error.message
+            : "Failed to publish course";
+      toast.error(msg);
+    } finally {
+      setPublishingCourseId(null);
+    }
   };
 
   const handleEditLecture = (lecture: Lecture) => {
@@ -825,6 +869,8 @@ const UnifiedCourseManagement: React.FC<UnifiedCourseManagementProps> = ({
                         }
                         onSelect={() => handleCourseSelect(course)}
                         onCreateLecture={() => handleCreateLecture(course._id)}
+                        onPublish={() => handlePublishCourse(course)}
+                        isPublishing={publishingCourseId === course._id}
                         lectureCount={getLectureCount(course)}
                       />
                     ))}
@@ -843,6 +889,8 @@ const UnifiedCourseManagement: React.FC<UnifiedCourseManagementProps> = ({
                         }
                         onSelect={() => handleCourseSelect(course)}
                         onCreateLecture={() => handleCreateLecture(course._id)}
+                        onPublish={() => handlePublishCourse(course)}
+                        isPublishing={publishingCourseId === course._id}
                         lectureCount={getLectureCount(course)}
                       />
                     ))}
@@ -859,6 +907,8 @@ const UnifiedCourseManagement: React.FC<UnifiedCourseManagementProps> = ({
                     }
                     onSelect={handleCourseSelect}
                     onCreateLecture={handleCreateLecture}
+                    onPublish={handlePublishCourse}
+                    publishingCourseId={publishingCourseId}
                   />
                 )}
               </>
@@ -1015,6 +1065,8 @@ interface CourseCardProps {
   onDelete: () => void;
   onSelect: () => void;
   onCreateLecture: () => void;
+  onPublish: () => void;
+  isPublishing?: boolean;
   lectureCount: number;
 }
 
@@ -1024,8 +1076,11 @@ const CourseCard: React.FC<CourseCardProps> = ({
   onDelete,
   onSelect,
   onCreateLecture,
+  onPublish,
+  isPublishing = false,
   lectureCount,
 }) => {
+  const isDraft = !course.isPublished && course.status !== "published";
   const getStatusColor = (status: string) => {
     switch (status) {
       case "published":
@@ -1082,6 +1137,22 @@ const CourseCard: React.FC<CourseCardProps> = ({
               <Plus className="w-4 h-4" />
             </Button>
 
+            {isDraft && (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 shadow-md"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPublish();
+                }}
+                disabled={isPublishing}
+                title="Publish course for students"
+              >
+                <Rocket className="w-4 h-4" />
+              </Button>
+            )}
+
             {/* Secondary Actions Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -1106,6 +1177,19 @@ const CourseCard: React.FC<CourseCardProps> = ({
                   <Plus className="w-4 h-4 mr-2" />
                   Add Lecture
                 </DropdownMenuItem>
+                {isDraft && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPublish();
+                    }}
+                    disabled={isPublishing}
+                    className="text-emerald-700 focus:text-emerald-800"
+                  >
+                    <Rocket className="w-4 h-4 mr-2" />
+                    Publish for students
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onDelete} className="text-red-600">
                   <Trash2 className="w-4 h-4 mr-2" />
@@ -1199,6 +1283,8 @@ interface CourseListItemProps {
   onDelete: () => void;
   onSelect: () => void;
   onCreateLecture: () => void;
+  onPublish: () => void;
+  isPublishing?: boolean;
   lectureCount: number;
 }
 
@@ -1208,8 +1294,11 @@ const CourseListItem: React.FC<CourseListItemProps> = ({
   onDelete,
   onSelect,
   onCreateLecture,
+  onPublish,
+  isPublishing = false,
   lectureCount,
 }) => {
+  const isDraft = !course.isPublished && course.status !== "published";
   const getStatusColor = (isPublished: boolean) => {
     return isPublished
       ? "bg-green-100 text-green-800"
@@ -1295,6 +1384,20 @@ const CourseListItem: React.FC<CourseListItemProps> = ({
               Edit
             </Button>
 
+            {isDraft && (
+              <Button
+                variant="default"
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700"
+                onClick={onPublish}
+                disabled={isPublishing}
+                title="Publish for students"
+              >
+                <Rocket className="w-4 h-4 mr-1" />
+                Publish
+              </Button>
+            )}
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
@@ -1306,6 +1409,16 @@ const CourseListItem: React.FC<CourseListItemProps> = ({
                   <Plus className="w-4 h-4 mr-2" />
                   Add Lecture
                 </DropdownMenuItem>
+                {isDraft && (
+                  <DropdownMenuItem
+                    onClick={onPublish}
+                    disabled={isPublishing}
+                    className="text-emerald-700"
+                  >
+                    <Rocket className="w-4 h-4 mr-2" />
+                    Publish for students
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onDelete} className="text-red-600">
                   <Trash2 className="w-4 h-4 mr-2" />
@@ -1328,6 +1441,8 @@ interface CourseTableProps {
   onDelete: (course: Course) => void;
   onSelect: (course: Course) => void;
   onCreateLecture: (courseId: string) => void;
+  onPublish: (course: Course) => void;
+  publishingCourseId: string | null;
 }
 
 const CourseTable: React.FC<CourseTableProps> = ({
@@ -1337,6 +1452,8 @@ const CourseTable: React.FC<CourseTableProps> = ({
   onDelete,
   onSelect,
   onCreateLecture,
+  onPublish,
+  publishingCourseId,
 }) => {
   // Helper function to get lecture count for a course
   const getLectureCount = (course: Course): number => {
@@ -1474,6 +1591,19 @@ const CourseTable: React.FC<CourseTableProps> = ({
                       <Edit className="w-4 h-4" />
                     </Button>
 
+                    {!course.isPublished && course.status !== "published" && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700"
+                        onClick={() => onPublish(course)}
+                        disabled={publishingCourseId === course._id}
+                        title="Publish for students"
+                      >
+                        <Rocket className="w-4 h-4" />
+                      </Button>
+                    )}
+
                     {/* More Actions Menu */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -1488,6 +1618,16 @@ const CourseTable: React.FC<CourseTableProps> = ({
                           <Plus className="w-4 h-4 mr-2" />
                           Add Lecture
                         </DropdownMenuItem>
+                        {!course.isPublished && course.status !== "published" && (
+                          <DropdownMenuItem
+                            onClick={() => onPublish(course)}
+                            disabled={publishingCourseId === course._id}
+                            className="text-emerald-700"
+                          >
+                            <Rocket className="w-4 h-4 mr-2" />
+                            Publish for students
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() => onDelete(course)}

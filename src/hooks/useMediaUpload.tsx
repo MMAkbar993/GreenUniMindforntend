@@ -30,6 +30,17 @@ interface WorkerMessage {
 
 type MediaType = "image" | "video" | "raw";
 
+let cloudinaryUploadConfigWarned = false;
+
+/** Cloudinary returns this when the preset is signed-only; client uploads need an Unsigned preset. */
+function formatCloudinaryClientError(message: string): string {
+  const m = message?.trim() || "Upload failed";
+  if (/preset must be whitelisted|whitelisted for unsigned|unsigned uploads/i.test(m)) {
+    return `${m} — Fix in Cloudinary Console: Settings → Upload → Upload presets → edit the preset in VITE_CLOUDINARY_PRESET → Signing mode: Unsigned. Enable Video (and Raw if you upload PDF/audio) on that preset.`;
+  }
+  return m;
+}
+
 export const useMedia = () => {
   const [progress, setProgress] = useState<number>(0);
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -43,18 +54,30 @@ export const useMedia = () => {
   const apiKey = import.meta.env.VITE_CLOUDINARY_API_KEY || '';
   const apiSecret = import.meta.env.VITE_CLOUDINARY_API_SECRET || '';
 
-  const isConfigured = !!(cloudName && uploadPreset && apiKey && apiSecret);
-  if (!isConfigured) {
-    console.warn("Cloudinary environment variables not fully configured. Media uploads will not work. Set VITE_CLOUDINARY_CLOUD_NAME, VITE_CLOUDINARY_PRESET, VITE_CLOUDINARY_API_KEY, VITE_CLOUDINARY_API_SECRET in .env");
-  }
+  /** Unsigned uploads only require cloud name + preset (see Cloudinary upload preset). */
+  const canUpload = !!(cloudName && uploadPreset);
 
-  // Initialize web worker for video uploads
   useEffect(() => {
-    // Create worker only if it doesn't exist
+    if (!canUpload && !cloudinaryUploadConfigWarned) {
+      cloudinaryUploadConfigWarned = true;
+      console.warn(
+        "Cloudinary upload env not set. Add VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_PRESET to .env. Optional: VITE_CLOUDINARY_API_SECRET for deleting/replacing existing assets."
+      );
+    }
+  }, [canUpload]);
+
+  // Initialize web worker for video uploads (only when uploads are possible)
+  useEffect(() => {
+    if (!canUpload) {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        workerRef.current = null;
+      }
+      return;
+    }
     if (!workerRef.current && window.Worker) {
       workerRef.current = new Worker('/worker.js');
 
-      // Initialize the worker with configuration
       workerRef.current.postMessage({
         type: 'INIT',
         payload: {
@@ -66,14 +89,13 @@ export const useMedia = () => {
       });
     }
 
-    // Clean up worker on unmount
     return () => {
       if (workerRef.current) {
         workerRef.current.terminate();
         workerRef.current = null;
       }
     };
-  }, [cloudName, uploadPreset, apiKey]);
+  }, [canUpload, cloudName, uploadPreset, apiKey]);
 
   const deleteFromCloudinary = async (publicId: string): Promise<CloudinaryDeleteResponse> => {
     const timestamp = Date.now();
@@ -119,11 +141,15 @@ export const useMedia = () => {
     resourceType: MediaType,
     useAdaptiveStreaming: boolean = false
   ): Promise<CloudinaryUploadResponse> => {
-    if (!isConfigured) {
-      return Promise.reject(new Error("Cloudinary is not configured. Please set VITE_CLOUDINARY_CLOUD_NAME, VITE_CLOUDINARY_PRESET, VITE_CLOUDINARY_API_KEY, and VITE_CLOUDINARY_API_SECRET in your .env file."));
+    if (!canUpload) {
+      return Promise.reject(
+        new Error(
+          "Cloudinary is not configured. Set VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_PRESET in your .env file (unsigned upload preset in Cloudinary)."
+        )
+      );
     }
-    // For video uploads with adaptive streaming, use the web worker
-    if (resourceType === 'video' && useAdaptiveStreaming && workerRef.current) {
+    // Video uploads use the web worker when available (keeps UI responsive; adaptive flag only affects streaming_profile)
+    if (resourceType === "video" && workerRef.current) {
       return new Promise((resolve, reject) => {
         if (!workerRef.current) {
           reject(new Error("Web worker not available"));
@@ -158,7 +184,7 @@ export const useMedia = () => {
 
             case 'UPLOAD_ERROR':
               workerRef.current?.removeEventListener('message', messageHandler);
-              reject(new Error(error || 'Upload failed'));
+              reject(new Error(formatCloudinaryClientError(error || "Upload failed")));
               break;
           }
         };
@@ -168,14 +194,13 @@ export const useMedia = () => {
 
         // Start the upload with the standard upload API (not chunked)
         workerRef.current.postMessage({
-          type: 'UPLOAD',
+          type: "UPLOAD",
           payload: {
             file,
             options: {
-              adaptive: true,
-              // Add any other options needed for the upload
-            }
-          }
+              adaptive: useAdaptiveStreaming,
+            },
+          },
         });
       });
     }
@@ -220,7 +245,11 @@ export const useMedia = () => {
           // Check if Cloudinary returned an error
           if (response.error) {
             console.error("Cloudinary error:", response.error);
-            reject(response);
+            const msg =
+              typeof response.error === "object" && response.error !== null && "message" in response.error
+                ? String((response.error as { message?: string }).message)
+                : String(response.error);
+            reject(new Error(formatCloudinaryClientError(msg)));
             return;
           }
 
@@ -249,12 +278,12 @@ export const useMedia = () => {
           let errorMessage = `Upload failed with status ${xhr.status}`;
           try {
             const errorResponse = JSON.parse(xhr.responseText);
-            if (errorResponse.error && errorResponse.error.message) {
-              errorMessage += `: ${errorResponse.error.message}`;
+            if (errorResponse.error?.message) {
+              errorMessage = formatCloudinaryClientError(errorResponse.error.message);
             } else {
               errorMessage += `: ${xhr.responseText}`;
             }
-            reject(errorResponse);
+            reject(new Error(errorMessage));
           } catch (e) {
             // If we can't parse the response, just use the status
             reject(new Error(errorMessage));
@@ -345,7 +374,7 @@ export const useMedia = () => {
     file: File,
     oldPublicId?: string,
     useAdaptiveStreaming: boolean = true
-  ): Promise<CloudinaryUploadResponse | null> => {
+  ): Promise<CloudinaryUploadResponse> => {
     setProgress(0);
     setBytesUploaded(0);
     setTotalBytes(file.size);
@@ -361,8 +390,8 @@ export const useMedia = () => {
         resourceType = "video";
       }
 
-      // Step 1: Delete old media if exists
-      if (oldPublicId) {
+      // Step 1: Delete old media if exists (requires API secret for signed destroy)
+      if (oldPublicId && apiSecret) {
         try {
           await deleteFromCloudinary(oldPublicId);
           console.log("Old media deleted successfully");
@@ -370,6 +399,8 @@ export const useMedia = () => {
           console.warn("Failed to delete old media, proceeding with upload:", deleteError);
           // Continue with upload even if deletion fails
         }
+      } else if (oldPublicId && !apiSecret) {
+        console.warn("Skipping delete of old media: VITE_CLOUDINARY_API_SECRET is not set");
       }
 
       // Step 2: Upload new media
@@ -384,7 +415,7 @@ export const useMedia = () => {
       const errorMessage = err instanceof Error ? err.message : "An error occurred during upload.";
       setError(errorMessage);
       setIsUploading(false);
-      return null;
+      throw err instanceof Error ? err : new Error(errorMessage);
     }
   };
 

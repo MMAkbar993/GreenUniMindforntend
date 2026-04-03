@@ -21,6 +21,8 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import {
   useUpdateLectureMutation,
@@ -101,6 +103,7 @@ const EditLecture = () => {
   } = useMedia();
 
   const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoAdaptiveStreaming, setVideoAdaptiveStreaming] = useState(true);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -267,7 +270,7 @@ const EditLecture = () => {
 
       if (videoFile) {
         uploadPromises.push(
-          uploadVideo(videoFile).then(response => {
+          uploadVideo(videoFile, undefined, videoAdaptiveStreaming).then(response => {
             if (!response?.secure_url) throw new Error("Video upload failed");
             videoUrl = response.secure_url;
             videoDuration = response?.duration || videoDuration;
@@ -433,6 +436,22 @@ const EditLecture = () => {
                     <FormLabel>Lecture Video (Optional)</FormLabel>
                     <FormControl>
                       <div className="space-y-4">
+                        <div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="edit-video-adaptive" className="text-sm font-medium">
+                              HD adaptive streaming (HLS)
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Off for faster upload; on for Cloudinary HD streaming prep.
+                            </p>
+                          </div>
+                          <Switch
+                            id="edit-video-adaptive"
+                            checked={videoAdaptiveStreaming}
+                            onCheckedChange={setVideoAdaptiveStreaming}
+                            disabled={isUploading}
+                          />
+                        </div>
                         {/* Existing video preview */}
                         {existingVideoUrl && !videoFile && (
                           <div className="space-y-2">

@@ -44,6 +44,7 @@ self.addEventListener('message', async (event) => {
  * @returns {Promise<Object>} - Cloudinary response
  */
 async function uploadVideoWithChunks(file, options = {}) {
+  const useAdaptive = options.adaptive === true;
   // Use the standard upload API instead of chunked upload to avoid CORS issues
   const url = `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`;
 
@@ -52,13 +53,9 @@ async function uploadVideoWithChunks(file, options = {}) {
   formData.append('upload_preset', uploadPreset);
   formData.append('resource_type', 'video');
 
-  // Add adaptive streaming options
-  formData.append('streaming_profile', 'hd'); // Use Cloudinary's HD streaming profile
-
-  // Add HLS and adaptive streaming options
-  if (options.adaptive) {
-    // Note: both eager and eager_async are not allowed with unsigned uploads, so we've removed them
-    // We'll rely on the streaming_profile parameter for adaptive streaming
+  // HD streaming profile triggers extra transcoding on Cloudinary (slower end-to-end).
+  if (useAdaptive) {
+    formData.append('streaming_profile', 'hd');
   }
 
   // Create an XMLHttpRequest to track upload progress
@@ -97,8 +94,7 @@ async function uploadVideoWithChunks(file, options = {}) {
           return;
         }
 
-        // Process the result to extract different resolution URLs
-        const videoResolutions = processVideoResolutions(result);
+        const videoResolutions = processVideoResolutions(result, useAdaptive);
 
         resolve({
           ...result,
@@ -135,31 +131,27 @@ async function uploadVideoWithChunks(file, options = {}) {
  * @param {Object} result - Cloudinary upload response
  * @returns {Array} - Array of video resolutions
  */
-function processVideoResolutions(result) {
+function processVideoResolutions(result, includeHls) {
   const resolutions = [];
 
-  // Add the original URL
   resolutions.push({
     url: result.secure_url,
     quality: 'original',
     format: result.format
   });
 
-  // With unsigned uploads, we can't use eager transformations
-  // Instead, we'll manually create URLs for different resolutions using Cloudinary's URL transformation API
-
-  // Extract base URL and public ID for transformations
   const baseUrlRoot = result.secure_url.split('/upload/')[0];
   const publicId = result.public_id;
   const format = result.format;
 
-  // Add HLS URL if streaming_profile was used
-  const hlsUrl = `${baseUrlRoot}/upload/sp_hd/${publicId}.m3u8`;
-  resolutions.push({
-    url: hlsUrl,
-    quality: 'adaptive',
-    format: 'hls'
-  });
+  if (includeHls) {
+    const hlsUrl = `${baseUrlRoot}/upload/sp_hd/${publicId}.m3u8`;
+    resolutions.push({
+      url: hlsUrl,
+      quality: 'adaptive',
+      format: 'hls'
+    });
+  }
 
   // Add derived URLs for different resolutions
   // These URLs are constructed using Cloudinary's transformation parameters
