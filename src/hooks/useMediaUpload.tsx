@@ -38,7 +38,20 @@ function formatCloudinaryClientError(message: string): string {
   if (/preset must be whitelisted|whitelisted for unsigned|unsigned uploads/i.test(m)) {
     return `${m} — Fix in Cloudinary Console: Settings → Upload → Upload presets → edit the preset in VITE_CLOUDINARY_PRESET → Signing mode: Unsigned. Enable Video (and Raw if you upload PDF/audio) on that preset.`;
   }
+  if (/Invalid extension in transformation/i.test(m)) {
+    if (/image\s+video\s+raw|for pdf, audio, files/i.test(m)) {
+      return `${m} — The preset "Format" (or similar) field is set to Cloudinary's UI description text ("Image Video Raw (for PDF, audio, files)") instead of a real delivery extension. The API then treats that phrase as an invalid transformation extension. In Console: Upload → Upload presets → edit the preset → clear that Format value or use the proper format controls (e.g. Auto / allow image+video+raw via the intended settings, not pasted help text). Save and retry. Optional: create a new unsigned preset with default format behavior and set VITE_CLOUDINARY_VIDEO_PRESET for video-only uploads.`;
+    }
+    return `${m} — Check the upload preset in Cloudinary Console (Upload → Upload presets): Incoming / Eager transformations or format rules may be invalid for this asset type. Optional: VITE_CLOUDINARY_VIDEO_PRESET for a separate minimal unsigned video preset.`;
+  }
   return m;
+}
+
+/** Errors where retrying without streaming_profile may help (not used for invalid-extension / preset-format issues). */
+function shouldRetryVideoAfterAdaptiveRejection(message: string): boolean {
+  const m = String(message);
+  if (/Invalid extension in transformation/i.test(m)) return false;
+  return /streaming_profile|streaming profile|eager_async|\beager\b|sp_/i.test(m);
 }
 
 export const useMedia = () => {
@@ -51,6 +64,9 @@ export const useMedia = () => {
 
   const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || '';
   const uploadPreset = import.meta.env.VITE_CLOUDINARY_PRESET || '';
+  /** Optional: unsigned preset dedicated to video when VITE_CLOUDINARY_PRESET is image-oriented or has bad video transforms (e.g. ml_default). */
+  const videoUploadPreset =
+    (import.meta.env.VITE_CLOUDINARY_VIDEO_PRESET || uploadPreset || '').trim();
   const apiKey = import.meta.env.VITE_CLOUDINARY_API_KEY || '';
   const apiSecret = import.meta.env.VITE_CLOUDINARY_API_SECRET || '';
 
@@ -61,7 +77,7 @@ export const useMedia = () => {
     if (!canUpload && !cloudinaryUploadConfigWarned) {
       cloudinaryUploadConfigWarned = true;
       console.warn(
-        "Cloudinary upload env not set. Add VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_PRESET to .env. Optional: VITE_CLOUDINARY_API_SECRET for deleting/replacing existing assets."
+        "Cloudinary upload env not set. Add VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_PRESET to .env. Optional: VITE_CLOUDINARY_VIDEO_PRESET (unsigned video-only preset), VITE_CLOUDINARY_API_SECRET for deleting/replacing existing assets."
       );
     }
   }, [canUpload]);
@@ -82,7 +98,7 @@ export const useMedia = () => {
         type: 'INIT',
         payload: {
           cloudName,
-          uploadPreset,
+          uploadPreset: videoUploadPreset,
           apiKey,
           chunkSize: 5 * 1024 * 1024 // 5MB chunks
         }
@@ -95,7 +111,7 @@ export const useMedia = () => {
         workerRef.current = null;
       }
     };
-  }, [canUpload, cloudName, uploadPreset, apiKey]);
+  }, [canUpload, cloudName, uploadPreset, videoUploadPreset, apiKey]);
 
   const deleteFromCloudinary = async (publicId: string): Promise<CloudinaryDeleteResponse> => {
     const timestamp = Date.now();
@@ -217,7 +233,10 @@ export const useMedia = () => {
       const url = `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`;
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("upload_preset", uploadPreset);
+      formData.append(
+        "upload_preset",
+        resourceType === "video" ? videoUploadPreset : uploadPreset
+      );
 
       // Only add resource_type for videos
       if (resourceType === 'video') {
@@ -423,7 +442,7 @@ export const useMedia = () => {
         const shouldRetryWithoutAdaptive =
           resourceType === "video" &&
           useAdaptive &&
-          /Invalid extension in transformation|streaming_profile|eager/i.test(message);
+          shouldRetryVideoAfterAdaptiveRejection(message);
 
         if (!shouldRetryWithoutAdaptive) {
           throw uploadError;

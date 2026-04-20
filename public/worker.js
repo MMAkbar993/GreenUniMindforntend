@@ -63,9 +63,10 @@ async function uploadVideoWithChunks(file, options = {}) {
 }
 
 function shouldRetryVideoWithoutAdaptive(message) {
-  return /Invalid extension in transformation|streaming_profile|eager|transformation|preset/i.test(
-    String(message)
-  );
+  const m = String(message);
+  // Same error often appears with streaming_profile off — usually upload preset / format config, not adaptive.
+  if (/Invalid extension in transformation/i.test(m)) return false;
+  return /streaming_profile|streaming profile|eager_async|\beager\b|sp_/i.test(m);
 }
 
 function uploadVideoOnce(file, useAdaptive, retriedWithoutAdaptive) {

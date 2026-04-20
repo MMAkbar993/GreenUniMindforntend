@@ -99,7 +99,9 @@ function cloudinaryErrorMessage(error: unknown): string {
 }
 
 function shouldRetryVideoWithoutAdaptive(message: string): boolean {
-  return /Invalid extension in transformation|streaming_profile|eager|transformation|preset/i.test(message);
+  const m = String(message);
+  if (/Invalid extension in transformation/i.test(m)) return false;
+  return /streaming_profile|streaming profile|eager_async|\beager\b|sp_/i.test(m);
 }
 
 // Function to upload file to Cloudinary with enhanced chunking and error handling
