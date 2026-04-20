@@ -404,9 +404,30 @@ export const useMedia = () => {
       }
 
       // Step 2: Upload new media
-      // For videos, use adaptive streaming if requested
+      // For videos, use adaptive streaming if requested.
+      // Some Cloudinary presets reject streaming transformations on unsigned uploads,
+      // so we gracefully retry without adaptive params when that happens.
       const useAdaptive = resourceType === 'video' && useAdaptiveStreaming;
-      const uploadedData = await uploadToCloudinary(file, resourceType, useAdaptive);
+      let uploadedData: CloudinaryUploadResponse;
+      try {
+        uploadedData = await uploadToCloudinary(file, resourceType, useAdaptive);
+      } catch (uploadError) {
+        const message = uploadError instanceof Error ? uploadError.message : String(uploadError);
+        const shouldRetryWithoutAdaptive =
+          resourceType === "video" &&
+          useAdaptive &&
+          /Invalid extension in transformation|streaming_profile|eager/i.test(message);
+
+        if (!shouldRetryWithoutAdaptive) {
+          throw uploadError;
+        }
+
+        console.warn(
+          "Adaptive streaming transformation was rejected by Cloudinary preset. Retrying video upload without adaptive streaming.",
+          uploadError
+        );
+        uploadedData = await uploadToCloudinary(file, resourceType, false);
+      }
 
       setProgress(100);
       setIsUploading(false);
