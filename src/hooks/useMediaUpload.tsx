@@ -182,10 +182,17 @@ export const useMedia = () => {
               });
               break;
 
-            case 'UPLOAD_ERROR':
+            case 'UPLOAD_ERROR': {
               workerRef.current?.removeEventListener('message', messageHandler);
-              reject(new Error(formatCloudinaryClientError(error || "Upload failed")));
+              const raw =
+                typeof error === "string" && error.trim()
+                  ? error.trim()
+                  : error != null
+                    ? String(error)
+                    : "";
+              reject(new Error(formatCloudinaryClientError(raw || "Upload failed")));
               break;
+            }
           }
         };
 

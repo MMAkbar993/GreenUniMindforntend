@@ -149,12 +149,19 @@ const useWorkerUpload = (options?: UseWorkerUploadOptions): UseWorkerUploadRetur
               }
               resolve(data);
               break;
-            case 'error':
+            case 'error': {
+              const msg =
+                typeof uploadError === 'string' && uploadError.trim()
+                  ? uploadError.trim()
+                  : uploadError != null
+                    ? String(uploadError)
+                    : 'Upload failed';
               setIsUploading(false);
-              setError(uploadError);
+              setError(msg);
               setInfo(retryable ? 'Upload failed. You can retry.' : 'Upload failed permanently.');
-              reject(new Error(uploadError));
+              reject(new Error(msg));
               break;
+            }
             case 'cancelled':
               setIsUploading(false);
               setInfo('Upload cancelled');

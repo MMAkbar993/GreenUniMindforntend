@@ -28,7 +28,10 @@ self.addEventListener('message', async (event) => {
         const result = await uploadVideoWithChunks(payload.file, payload.options);
         self.postMessage({ type: 'UPLOAD_COMPLETE', result });
       } catch (error) {
-        self.postMessage({ type: 'UPLOAD_ERROR', error: error.message });
+        self.postMessage({
+          type: 'UPLOAD_ERROR',
+          error: serializeWorkerError(error),
+        });
       }
       break;
 
@@ -36,6 +39,17 @@ self.addEventListener('message', async (event) => {
       self.postMessage({ type: 'ERROR', message: 'Unknown command' });
   }
 });
+
+function serializeWorkerError(error) {
+  if (error instanceof Error) return error.message || String(error);
+  if (error && typeof error === 'object') {
+    if (error.error && typeof error.error === 'object' && error.error.message) {
+      return String(error.error.message);
+    }
+    if (typeof error.message === 'string') return error.message;
+  }
+  return String(error != null ? error : 'Upload failed');
+}
 
 /**
  * Upload a video file to Cloudinary using direct upload (not chunked)
@@ -45,6 +59,16 @@ self.addEventListener('message', async (event) => {
  */
 async function uploadVideoWithChunks(file, options = {}) {
   const useAdaptive = options.adaptive === true;
+  return uploadVideoOnce(file, useAdaptive, false);
+}
+
+function shouldRetryVideoWithoutAdaptive(message) {
+  return /Invalid extension in transformation|streaming_profile|eager|transformation|preset/i.test(
+    String(message)
+  );
+}
+
+function uploadVideoOnce(file, useAdaptive, retriedWithoutAdaptive) {
   // Use the standard upload API instead of chunked upload to avoid CORS issues
   const url = `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`;
 
@@ -81,16 +105,29 @@ async function uploadVideoWithChunks(file, options = {}) {
 
     xhr.onload = function() {
       if (xhr.status >= 200 && xhr.status < 300) {
-        const result = JSON.parse(xhr.responseText);
+        let result;
+        try {
+          result = JSON.parse(xhr.responseText);
+        } catch (parseErr) {
+          reject(new Error('Invalid response from Cloudinary'));
+          return;
+        }
 
         // Check if Cloudinary returned an error
         if (result.error) {
           console.error("Cloudinary error:", result.error);
-          self.postMessage({
-            type: 'UPLOAD_ERROR',
-            error: result.error.message || 'Cloudinary upload failed'
-          });
-          reject(result);
+          const msg = result.error.message || 'Cloudinary upload failed';
+          if (useAdaptive && !retriedWithoutAdaptive && shouldRetryVideoWithoutAdaptive(msg)) {
+            self.postMessage({
+              type: 'UPLOAD_PROGRESS',
+              progress: 0,
+              bytesUploaded: 0,
+              totalBytes: file.size,
+            });
+            uploadVideoOnce(file, false, true).then(resolve, reject);
+            return;
+          }
+          reject(new Error(msg));
           return;
         }
 
@@ -108,13 +145,20 @@ async function uploadVideoWithChunks(file, options = {}) {
           if (errorResponse.error && errorResponse.error.message) {
             errorMessage = errorResponse.error.message;
           }
-          self.postMessage({ type: 'UPLOAD_ERROR', error: errorMessage });
-          reject(errorResponse);
         } catch (e) {
-          // If we can't parse the response, just use the status
-          self.postMessage({ type: 'UPLOAD_ERROR', error: errorMessage });
-          reject(new Error(errorMessage));
+          /* keep errorMessage */
         }
+        if (useAdaptive && !retriedWithoutAdaptive && shouldRetryVideoWithoutAdaptive(errorMessage)) {
+          self.postMessage({
+            type: 'UPLOAD_PROGRESS',
+            progress: 0,
+            bytesUploaded: 0,
+            totalBytes: file.size,
+          });
+          uploadVideoOnce(file, false, true).then(resolve, reject);
+          return;
+        }
+        reject(new Error(errorMessage));
       }
     };
 
