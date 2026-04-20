@@ -39,12 +39,10 @@ class FrontendKeepAlive {
   private async ping(): Promise<void> {
     try {
       const base = this.backendUrl.replace(/\/api\/?$/, '');
+      // Avoid custom headers on cross-origin GET: `Content-Type: application/json`
+      // triggers a CORS preflight; a simple GET works with normal ACAO responses.
       const response = await fetch(`${base}/health`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        // Don't include credentials for health check
         credentials: 'omit',
       });
 

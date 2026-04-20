@@ -91,6 +91,17 @@ self.onmessage = (event: MessageEvent<WorkerMessage>) => {
   }
 };
 
+function cloudinaryErrorMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    return String((error as { message?: string }).message);
+  }
+  return String(error);
+}
+
+function shouldRetryVideoWithoutAdaptive(message: string): boolean {
+  return /Invalid extension in transformation|streaming_profile|eager|transformation|preset/i.test(message);
+}
+
 // Function to upload file to Cloudinary with enhanced chunking and error handling
 function uploadFile(
   file: File,
@@ -100,7 +111,8 @@ function uploadFile(
   resourceType: string,
   useAdaptiveStreaming = false,
   chunkSize = 10 * 1024 * 1024, // 10MB default chunk size (increased from 6MB)
-  maxRetries = 3
+  maxRetries = 3,
+  retriedWithoutAdaptive = false
 ) {
   // Create FormData
   const formData = new FormData();
@@ -108,38 +120,19 @@ function uploadFile(
   formData.append('upload_preset', uploadPreset);
   formData.append('cloud_name', cloudName);
 
-  // Add upload ID for tracking
-  if (currentUploadId) {
-    formData.append('upload_id', currentUploadId);
-  }
-
   // Add resource_type for videos
   if (resourceType === 'video') {
     formData.append('resource_type', 'video');
 
-    // Add streaming profile for adaptive streaming with maxres quality
+    // Unsigned uploads: only streaming_profile is safe here. Do not send eager /
+    // eager_transformations as JSON — Cloudinary rejects them and returns errors like
+    // "Invalid extension in transformation: image video raw ...".
     if (useAdaptiveStreaming) {
-      formData.append('streaming_profile', 'auto:maxres');
-      formData.append('eager', 'sp_auto:maxres');
-      formData.append('eager_async', 'true');
-
-      // Add additional eager transformations for different quality levels
-      formData.append('eager_transformations', JSON.stringify([
-        { streaming_profile: 'full_hd' },
-        { streaming_profile: 'hd' },
-        { streaming_profile: 'sd' }
-      ]));
+      formData.append('streaming_profile', 'hd');
     }
 
-    // Add chunk size for large uploads
-    formData.append('chunk_size', chunkSize.toString());
-
-    // Enable chunked uploads explicitly
     formData.append('use_filename', 'true');
     formData.append('unique_filename', 'true');
-
-    // Add timeout settings
-    formData.append('timeout', '600000'); // 10 minutes in milliseconds
   }
 
   // Create XHR request with improved error handling
@@ -175,6 +168,39 @@ function uploadFile(
     if (xhr!.status >= 200 && xhr!.status < 300) {
       try {
         const response = JSON.parse(xhr!.responseText);
+
+        if (response.error) {
+          const msg = cloudinaryErrorMessage(response.error);
+          if (
+            resourceType === 'video' &&
+            useAdaptiveStreaming &&
+            !retriedWithoutAdaptive &&
+            shouldRetryVideoWithoutAdaptive(msg)
+          ) {
+            self.postMessage({
+              type: 'info',
+              message: 'Adaptive streaming not accepted by preset; retrying plain video upload…',
+            });
+            uploadFile(
+              file,
+              url,
+              uploadPreset,
+              cloudName,
+              resourceType,
+              false,
+              chunkSize,
+              maxRetries,
+              true
+            );
+            return;
+          }
+          self.postMessage({
+            type: 'error',
+            error: msg,
+            retryable: false,
+          });
+          return;
+        }
 
         // Check if this is an adaptive streaming response
         const streamingUrl = response.eager &&
@@ -215,12 +241,48 @@ function uploadFile(
         });
       }
     } else {
-      // Check if we should retry based on status code
+      let errMsg = `Upload failed with status ${xhr!.status}`;
+      try {
+        const errBody = JSON.parse(xhr!.responseText) as { error?: { message?: string } | string };
+        if (errBody.error) {
+          errMsg =
+            typeof errBody.error === 'object' && errBody.error !== null && 'message' in errBody.error
+              ? String(errBody.error.message)
+              : String(errBody.error);
+        }
+      } catch {
+        /* ignore */
+      }
+
+      if (
+        resourceType === 'video' &&
+        useAdaptiveStreaming &&
+        !retriedWithoutAdaptive &&
+        shouldRetryVideoWithoutAdaptive(errMsg)
+      ) {
+        self.postMessage({
+          type: 'info',
+          message: 'Adaptive streaming not accepted by preset; retrying plain video upload…',
+        });
+        uploadFile(
+          file,
+          url,
+          uploadPreset,
+          cloudName,
+          resourceType,
+          false,
+          chunkSize,
+          maxRetries,
+          true
+        );
+        return;
+      }
+
       const isRetryable = xhr!.status >= 500 || xhr!.status === 429;
 
       self.postMessage({
         type: 'error',
-        error: `Upload failed with status ${xhr!.status}`,
+        error: errMsg,
         retryable: isRetryable,
         statusCode: xhr!.status
       });
