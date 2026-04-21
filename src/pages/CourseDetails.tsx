@@ -9,6 +9,7 @@ import { useGetMeQuery } from "@/redux/features/auth/authApi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IEnrolledCourse } from "@/types";
 import BuyNowButton from "@/components/Course/BuyNowButton";
+import { renderCourseDescription } from "@/utils/renderRichText";
 
 const CourseDetails = () => {
   const { courseId } = useParams();
@@ -78,7 +79,12 @@ const CourseDetails = () => {
         </div>
         <div className="space-y-4">
           <h1 className="text-3xl font-bold">{course.title}</h1>
-          <p className="text-gray-600">{course.description}</p>
+          <div
+            className="text-gray-600"
+            dangerouslySetInnerHTML={{
+              __html: renderCourseDescription(course.description)
+            }}
+          />
           <div className="flex items-center gap-2">
             <span className="font-semibold">Price:</span>
             <span className="text-2xl font-bold">

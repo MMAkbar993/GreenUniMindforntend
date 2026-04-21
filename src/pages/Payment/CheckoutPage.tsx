@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IEnrolledCourse } from "@/types";
 import { Logger, debugOnly } from "@/utils/logger";
+import { getPlainTextFromRichText } from "@/utils/renderRichText";
 
 const getApiErrorMessage = (error: unknown): string | null => {
   if (
@@ -179,7 +180,7 @@ const CheckoutPage = () => {
               <h1 className="text-2xl font-bold mb-2">{course.title}</h1>
               {course.description && (
                 <p className="text-gray-600 text-sm line-clamp-3 mb-4">
-                  {course.description}
+                  {getPlainTextFromRichText(course.description)}
                 </p>
               )}
               <div className="flex items-center gap-2 text-lg font-semibold text-green-600">

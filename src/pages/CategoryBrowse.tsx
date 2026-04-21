@@ -11,6 +11,7 @@ import { addToCart } from "@/redux/features/cart/cartSlice";
 import { useGetMeQuery } from "@/redux/features/auth/authApi";
 import { toast } from "sonner";
 import { IEnrolledCourse } from "@/types";
+import { getPlainTextFromRichText } from "@/utils/renderRichText";
 
 const CategoryBrowse = () => {
   const getEnrolledCourseId = (enrolledCourse: unknown): string => {
@@ -240,7 +241,7 @@ const CategoryBrowse = () => {
                         {course.title}
                       </h3>
                       <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                        {course.description || "No description available"}
+                        {getPlainTextFromRichText(course.description) || "No description available"}
                       </p>
                       
                       <div className="flex items-center justify-between">

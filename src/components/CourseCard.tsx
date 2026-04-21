@@ -16,6 +16,7 @@ import {
   Clock,
   Award,
 } from 'lucide-react';
+import { getPlainTextFromRichText } from '@/utils/renderRichText';
 
 interface CourseCardProps {
   course: ICourse;
@@ -150,7 +151,7 @@ const CourseCard = ({
 
         {/* Course Description */}
         <p className="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-2 flex-grow">
-          {course.description || "No description available"}
+          {getPlainTextFromRichText(course.description) || "No description available"}
         </p>
 
         {/* Instructor Info */}

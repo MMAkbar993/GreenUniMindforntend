@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import AdPlacement from '@/components/ads/AdPlacement';
 import { debugOnly } from '@/utils/logger';
+import { getPlainTextFromRichText } from '@/utils/renderRichText';
 
 const AllCourses = () => {
   const getEnrolledCourseId = (enrolledCourse: unknown): string => {
@@ -84,7 +85,7 @@ const AllCourses = () => {
     courses.data.filter((course: ICourse) => {
       const matchesSearch = searchTerm === '' ||
         course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase()));
+        (getPlainTextFromRichText(course.description).toLowerCase().includes(searchTerm.toLowerCase()));
 
       const matchesCategory = selectedCategory === null || course.category === selectedCategory;
       const matchesLevel = selectedLevel === null || course.courseLevel === selectedLevel;
@@ -606,7 +607,7 @@ const AllCourses = () => {
                               {course.title}
                             </h3>
                             <p className="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-2">
-                              {course.description || "No description available"}
+                              {getPlainTextFromRichText(course.description) || "No description available"}
                             </p>
                           </div>
 
