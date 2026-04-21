@@ -13,6 +13,23 @@ import { toast } from "sonner";
 import { IEnrolledCourse } from "@/types";
 
 const CategoryBrowse = () => {
+  const getEnrolledCourseId = (enrolledCourse: unknown): string => {
+    if (!enrolledCourse || typeof enrolledCourse !== "object") return "";
+
+    const raw = enrolledCourse as {
+      courseId?: string | { _id?: string };
+      _id?: string;
+    };
+
+    if (typeof raw.courseId === "string") return raw.courseId;
+    if (raw.courseId && typeof raw.courseId === "object" && typeof raw.courseId._id === "string") {
+      return raw.courseId._id;
+    }
+    if (typeof raw._id === "string") return raw._id;
+
+    return "";
+  };
+
   const { categorySlug, subcategorySlug } = useParams();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
@@ -50,8 +67,8 @@ const CategoryBrowse = () => {
 
     // Check if student is already enrolled in this course
     const isAlreadyEnrolled = userData?.data?.enrolledCourses?.some(
-      (enrolledCourse: IEnrolledCourse) =>
-        enrolledCourse.courseId === course._id
+      (enrolledCourse: IEnrolledCourse | unknown) =>
+        getEnrolledCourseId(enrolledCourse) === course._id
     );
 
     if (isAlreadyEnrolled) {
@@ -66,7 +83,7 @@ const CategoryBrowse = () => {
   const isCourseEnrolled = (courseId?: string) =>
     !!courseId &&
     userData?.data?.enrolledCourses?.some(
-      (enrolledCourse: IEnrolledCourse) => enrolledCourse.courseId === courseId
+      (enrolledCourse: IEnrolledCourse | unknown) => getEnrolledCourseId(enrolledCourse) === courseId
     );
 
   const handleCourseClick = (courseId: string) => {

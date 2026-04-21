@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import Pagination from '@/components/Pagination';
-import { IEnrolledCourse } from '@/types/student';
 import { ICourse } from '@/types/course';
 import {
   Search,
@@ -31,6 +30,23 @@ import AdPlacement from '@/components/ads/AdPlacement';
 import { debugOnly } from '@/utils/logger';
 
 const AllCourses = () => {
+  const getEnrolledCourseId = (enrolledCourse: unknown): string => {
+    if (!enrolledCourse || typeof enrolledCourse !== 'object') return '';
+
+    const raw = enrolledCourse as {
+      courseId?: string | { _id?: string };
+      _id?: string;
+    };
+
+    if (typeof raw.courseId === 'string') return raw.courseId;
+    if (raw.courseId && typeof raw.courseId === 'object' && typeof raw.courseId._id === 'string') {
+      return raw.courseId._id;
+    }
+    if (typeof raw._id === 'string') return raw._id;
+
+    return '';
+  };
+
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
@@ -94,8 +110,7 @@ const AllCourses = () => {
 
     // Check if student is already enrolled in this course
     const isAlreadyEnrolled = userData?.data?.enrolledCourses?.some(
-      (enrolledCourse: IEnrolledCourse) =>
-        enrolledCourse.courseId === course._id
+      (enrolledCourse: unknown) => getEnrolledCourseId(enrolledCourse) === course._id
     );
 
     if (isAlreadyEnrolled) {
@@ -110,7 +125,7 @@ const AllCourses = () => {
   const isCourseEnrolled = (courseId?: string) =>
     !!courseId &&
     userData?.data?.enrolledCourses?.some(
-      (enrolledCourse: IEnrolledCourse) => enrolledCourse.courseId === courseId
+      (enrolledCourse: unknown) => getEnrolledCourseId(enrolledCourse) === courseId
     );
 
   const handlePageChange = (page: number) => {
