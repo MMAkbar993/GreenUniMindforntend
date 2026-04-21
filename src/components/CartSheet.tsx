@@ -23,6 +23,29 @@ import { USER_ROLE } from "@/constants/global";
 import { IEnrolledCourse } from "@/types";
 import { useEnrollCourseMutation } from "@/redux/features/course/courseApi";
 
+const getApiErrorMessage = (error: unknown): string | null => {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "data" in error &&
+    typeof (error as { data?: unknown }).data === "object" &&
+    (error as { data?: unknown }).data !== null &&
+    "message" in ((error as { data: { message?: unknown } }).data)
+  ) {
+    return String((error as { data: { message: string } }).data.message);
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "object" && error !== null && "message" in error) {
+    return String((error as { message: string }).message);
+  }
+
+  return null;
+};
+
 const CartSheet = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -123,12 +146,17 @@ const CartSheet = () => {
       window.location.href = checkoutUrl;
     } catch (error) {
       Logger.error("Checkout error", { error });
-      // Handle error with proper type checking
-      const errorMessage = error instanceof Error
-        ? error.message
-        : typeof error === 'object' && error !== null && 'message' in error
-          ? String(error.message)
-          : "Payment failed. Please try again.";
+      const course = cartItems[0];
+      const errorMessage = getApiErrorMessage(error) || "Payment failed. Please try again.";
+
+      if (errorMessage.toLowerCase().includes("already enrolled") && course?._id) {
+        toast.success("You are already enrolled in this course.");
+        if (userData?.data?._id) {
+          dispatch(removeFromCart({ courseId: course._id, userId: userData.data._id }));
+        }
+        navigate(`/student/course/${course._id}`);
+        return;
+      }
 
       toast.error(errorMessage);
     }

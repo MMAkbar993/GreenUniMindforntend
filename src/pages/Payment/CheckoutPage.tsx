@@ -11,6 +11,29 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { IEnrolledCourse } from "@/types";
 import { Logger, debugOnly } from "@/utils/logger";
 
+const getApiErrorMessage = (error: unknown): string | null => {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "data" in error &&
+    typeof (error as { data?: unknown }).data === "object" &&
+    (error as { data?: unknown }).data !== null &&
+    "message" in ((error as { data: { message?: unknown } }).data)
+  ) {
+    return String((error as { data: { message: string } }).data.message);
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "object" && error !== null && "message" in error) {
+    return String((error as { message: string }).message);
+  }
+
+  return null;
+};
+
 const CheckoutPage = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
@@ -75,14 +98,14 @@ const CheckoutPage = () => {
       window.location.href = checkoutUrl;
     } catch (error) {
       Logger.error("Checkout error", { error });
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : typeof error === "object" &&
-              error !== null &&
-              "message" in error
-            ? String((error as { message: string }).message)
-            : "Payment failed. Please try again.";
+      const errorMessage = getApiErrorMessage(error) || "Payment failed. Please try again.";
+
+      if (errorMessage.toLowerCase().includes("already enrolled")) {
+        toast.success("You are already enrolled in this course.");
+        navigate(`/student/course/${courseId}`);
+        return;
+      }
+
       toast.error(errorMessage);
     }
   };
