@@ -107,6 +107,12 @@ const AllCourses = () => {
     toast.success("Course added to cart");
   };
 
+  const isCourseEnrolled = (courseId?: string) =>
+    !!courseId &&
+    userData?.data?.enrolledCourses?.some(
+      (enrolledCourse: IEnrolledCourse) => enrolledCourse.courseId === courseId
+    );
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -599,11 +605,12 @@ const AllCourses = () => {
                             </div>
 
                             <Button
-                              className="bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm px-4 py-2 flex items-center gap-1"
+                              className="bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm px-4 py-2 flex items-center gap-1 disabled:opacity-100 disabled:bg-gray-300 disabled:hover:bg-gray-300 disabled:text-gray-700"
                               onClick={(e) => handleEnroll(e, course)}
+                              disabled={isCourseEnrolled(course._id)}
                             >
-                              Enroll Now
-                              <ChevronRight className="w-4 h-4" />
+                              {isCourseEnrolled(course._id) ? "Enrolled" : "Enroll Now"}
+                              {!isCourseEnrolled(course._id) && <ChevronRight className="w-4 h-4" />}
                             </Button>
                           </div>
                         </div>

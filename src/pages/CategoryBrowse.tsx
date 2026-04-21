@@ -63,6 +63,12 @@ const CategoryBrowse = () => {
     toast.success("Course added to cart");
   };
 
+  const isCourseEnrolled = (courseId?: string) =>
+    !!courseId &&
+    userData?.data?.enrolledCourses?.some(
+      (enrolledCourse: IEnrolledCourse) => enrolledCourse.courseId === courseId
+    );
+
   const handleCourseClick = (courseId: string) => {
     navigate(`/courses/${courseId}`);
   };
@@ -227,10 +233,11 @@ const CategoryBrowse = () => {
                         </div>
                         <Button
                           size="sm"
-                          className="bg-green-500 hover:bg-green-600 text-white"
+                          className="bg-green-500 hover:bg-green-600 text-white disabled:opacity-100 disabled:bg-gray-300 disabled:hover:bg-gray-300 disabled:text-gray-700"
                           onClick={(e) => handleEnroll(e, course)}
+                          disabled={isCourseEnrolled(course._id)}
                         >
-                          Enroll Now
+                          {isCourseEnrolled(course._id) ? "Enrolled" : "Enroll Now"}
                         </Button>
                       </div>
                     </div>
