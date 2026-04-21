@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import Pagination from '@/components/Pagination';
 import { ICourse } from '@/types/course';
+import { useGetAllCategoriesQuery } from '@/redux/features/category/categoryApi';
 import {
   Search,
   Filter,
@@ -31,6 +32,18 @@ import { debugOnly } from '@/utils/logger';
 import { getPlainTextFromRichText } from '@/utils/renderRichText';
 
 const AllCourses = () => {
+  const getCategoryKey = (rawCategory: unknown): string => {
+    if (!rawCategory) return '';
+    if (typeof rawCategory === 'string') return rawCategory;
+    if (typeof rawCategory === 'object') {
+      const parsedCategory = rawCategory as { _id?: string; id?: string; name?: string };
+      if (typeof parsedCategory._id === 'string') return parsedCategory._id;
+      if (typeof parsedCategory.id === 'string') return parsedCategory.id;
+      if (typeof parsedCategory.name === 'string') return parsedCategory.name;
+    }
+    return String(rawCategory);
+  };
+
   const getEnrolledCourseId = (enrolledCourse: unknown): string => {
     if (typeof enrolledCourse === 'string') return enrolledCourse;
     if (!enrolledCourse || typeof enrolledCourse !== 'object') return '';
@@ -63,6 +76,7 @@ const AllCourses = () => {
   const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
 
   const { data: courses, isLoading, isError } = useGetPublishedCoursesQuery(undefined);
+  const { data: categoriesData } = useGetAllCategoriesQuery();
   const { data: userData } = useGetMeQuery(undefined, { refetchOnMountOrArgChange: true });
 
   // Update search term when URL changes
@@ -73,9 +87,20 @@ const AllCourses = () => {
   }, [location.search]);
 
   // Extract unique categories and levels from courses
-  const categories = courses?.data ?
-    Array.from(new Set(courses.data.map((course: ICourse) => course.category))) :
-    [];
+  const categoryLookup = (categoriesData?.data || []).reduce<Record<string, string>>((acc, category) => {
+    acc[category._id] = category.name;
+    return acc;
+  }, {});
+
+  const categories = courses?.data
+    ? Array.from(
+        new Set(
+          courses.data
+            .map((course: ICourse) => getCategoryKey(course.category))
+            .filter(Boolean)
+        )
+      )
+    : [];
 
   const levels = courses?.data ?
     Array.from(new Set(courses.data.map((course: ICourse) => course.courseLevel))) :
@@ -88,7 +113,7 @@ const AllCourses = () => {
         course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (getPlainTextFromRichText(course.description).toLowerCase().includes(searchTerm.toLowerCase()));
 
-      const matchesCategory = selectedCategory === null || course.category === selectedCategory;
+      const matchesCategory = selectedCategory === null || getCategoryKey(course.category) === selectedCategory;
       const matchesLevel = selectedLevel === null || course.courseLevel === selectedLevel;
 
       return matchesSearch && matchesCategory && matchesLevel;
@@ -376,7 +401,7 @@ const AllCourses = () => {
                               ? 'bg-green-50 border-l-4 border-green-500'
                               : 'hover:bg-gray-50'
                           }`}
-                          onClick={() => setSelectedCategory(selectedCategory === category ? '' : category as string)}
+                          onClick={() => setSelectedCategory(selectedCategory === category ? null : (category as string))}
                           whileHover={{ x: 3 }}
                           whileTap={{ scale: 0.98 }}
                         >
@@ -392,7 +417,7 @@ const AllCourses = () => {
                             )}
                           </div>
                           <span className={`${selectedCategory === category ? 'font-medium text-green-700' : 'text-gray-700'}`}>
-                            {String(category)}
+                            {categoryLookup[String(category)] || String(category)}
                           </span>
                         </motion.div>
                       ))
