@@ -72,7 +72,7 @@ const CategoryBrowse = () => {
     );
 
     if (isAlreadyEnrolled) {
-      toast.error("You are already enrolled in this course");
+      navigate(`/courses/${course._id}`);
       return;
     }
 
@@ -250,9 +250,8 @@ const CategoryBrowse = () => {
                         </div>
                         <Button
                           size="sm"
-                          className="bg-green-500 hover:bg-green-600 text-white disabled:opacity-100 disabled:bg-gray-300 disabled:hover:bg-gray-300 disabled:text-gray-700"
+                          className="bg-green-500 hover:bg-green-600 text-white"
                           onClick={(e) => handleEnroll(e, course)}
-                          disabled={isCourseEnrolled(course._id)}
                         >
                           {isCourseEnrolled(course._id) ? "Enrolled" : "Enroll Now"}
                         </Button>

@@ -114,7 +114,7 @@ const AllCourses = () => {
     );
 
     if (isAlreadyEnrolled) {
-      toast.error("You are already enrolled in this course");
+      navigate(`/courses/${course._id}`);
       return;
     }
 
@@ -620,9 +620,8 @@ const AllCourses = () => {
                             </div>
 
                             <Button
-                              className="bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm px-4 py-2 flex items-center gap-1 disabled:opacity-100 disabled:bg-gray-300 disabled:hover:bg-gray-300 disabled:text-gray-700"
+                              className="bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm px-4 py-2 flex items-center gap-1"
                               onClick={(e) => handleEnroll(e, course)}
-                              disabled={isCourseEnrolled(course._id)}
                             >
                               {isCourseEnrolled(course._id) ? "Enrolled" : "Enroll Now"}
                               {!isCourseEnrolled(course._id) && <ChevronRight className="w-4 h-4" />}
