@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useGetCourseByIdQuery } from "@/redux/features/course/courseApi";
+import { useEnrollCourseMutation } from "@/redux/features/course/courseApi";
 import { useGetMeQuery } from "@/redux/features/auth/authApi";
 import { useCreateCheckoutSessionMutation } from "@/redux/features/payment/payment.api";
 import { toast } from "sonner";
@@ -20,6 +21,7 @@ const CheckoutPage = () => {
   const { data: userData } = useGetMeQuery(undefined);
   const [createCheckoutSession, { isLoading: isCheckoutLoading }] =
     useCreateCheckoutSessionMutation();
+  const [enrollCourse, { isLoading: isEnrollLoading }] = useEnrollCourseMutation();
 
   const course = courseData?.data;
   const isEnrolled = userData?.data?.enrolledCourses?.some(
@@ -45,6 +47,15 @@ const CheckoutPage = () => {
     }
 
     try {
+      const isFreeCourse = course.isFree === "free" || (course.coursePrice || 0) <= 0;
+
+      if (isFreeCourse) {
+        await enrollCourse(courseId).unwrap();
+        toast.success("Enrollment successful! You can start learning now.");
+        navigate(`/student/course/${courseId}`);
+        return;
+      }
+
       const amount = course.coursePrice || 0;
       debugOnly.log("Creating checkout session:", { courseId, amount });
 
@@ -160,22 +171,26 @@ const CheckoutPage = () => {
               className="w-full"
               size="lg"
               onClick={handleCheckout}
-              disabled={isCheckoutLoading}
+              disabled={isCheckoutLoading || isEnrollLoading}
             >
-              {isCheckoutLoading ? (
+              {isCheckoutLoading || isEnrollLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
+                  {isEnrollLoading ? "Enrolling..." : "Processing..."}
                 </>
               ) : (
                 <>
                   <CreditCard className="mr-2 h-4 w-4" />
-                  Proceed to Payment
+                  {course.isFree === "free" || (course.coursePrice || 0) <= 0
+                    ? "Enroll Now"
+                    : "Proceed to Payment"}
                 </>
               )}
             </Button>
             <p className="text-sm text-gray-500 text-center mt-4">
-              You will be redirected to Stripe to complete your purchase securely.
+              {course.isFree === "free" || (course.coursePrice || 0) <= 0
+                ? "This is a free course. You will be enrolled instantly."
+                : "You will be redirected to Stripe to complete your purchase securely."}
             </p>
           </div>
         </CardContent>

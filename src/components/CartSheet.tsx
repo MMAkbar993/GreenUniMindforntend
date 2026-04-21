@@ -21,6 +21,7 @@ import { Card } from "./ui/card";
 import { selectCurrentUser } from "@/redux/features/auth/authSlice";
 import { USER_ROLE } from "@/constants/global";
 import { IEnrolledCourse } from "@/types";
+import { useEnrollCourseMutation } from "@/redux/features/course/courseApi";
 
 const CartSheet = () => {
   const dispatch = useAppDispatch();
@@ -31,6 +32,7 @@ const CartSheet = () => {
   const user = useAppSelector(selectCurrentUser);
   const [createCheckoutSession, { isLoading }] =
     useCreateCheckoutSessionMutation();
+  const [enrollCourse, { isLoading: isEnrollLoading }] = useEnrollCourseMutation();
 
   // Load user's cart when component mounts or user changes
   useEffect(() => {
@@ -90,6 +92,18 @@ const CartSheet = () => {
         courseId: course._id,
         amount: course.coursePrice || 0
       });
+
+      const isFreeCourse = course.isFree === "free" || (course.coursePrice || 0) <= 0;
+
+      if (isFreeCourse) {
+        await enrollCourse(course._id).unwrap();
+        toast.success("Enrollment successful! You can start learning now.");
+        if (userData?.data?._id) {
+          dispatch(removeFromCart({ courseId: course._id, userId: userData.data._id }));
+        }
+        navigate(`/student/course/${course._id}`);
+        return;
+      }
 
       const response = await createCheckoutSession({
         courseId: course._id,
@@ -185,14 +199,14 @@ const CartSheet = () => {
                     .reduce((sum, item) => sum + (item.coursePrice || 0), 0)
                     .toFixed(2)}
                 </span>
-                <Button onClick={handleCheckout} disabled={isLoading}>
-                  {isLoading ? (
+                <Button onClick={handleCheckout} disabled={isLoading || isEnrollLoading}>
+                  {isLoading || isEnrollLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
+                      {isEnrollLoading ? "Enrolling..." : "Processing..."}
                     </>
                   ) : (
-                    "Checkout with stripe"
+                    "Checkout"
                   )}
                 </Button>
               </div>
