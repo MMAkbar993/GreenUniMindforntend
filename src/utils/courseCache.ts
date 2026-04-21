@@ -198,22 +198,11 @@ export const optimisticCourseUpdate = (
     const patchResult1 = dispatch(
       courseApi.util.updateQueryData('getCourseById', courseId, (draft) => {
         if (draft?.data) {
-          const originalData = { ...draft.data };
           Object.assign(draft.data, updateData);
-
-          // Store rollback action
-          rollbackActions.push(() => {
-            dispatch(
-              courseApi.util.updateQueryData('getCourseById', courseId, (draft) => {
-                if (draft?.data) {
-                  Object.assign(draft.data, originalData);
-                }
-              }) as any
-            );
-          });
         }
       }) as any
     );
+    rollbackActions.push(() => patchResult1.undo());
 
     // Optimistic update for creator courses
     if (creatorId) {
@@ -222,26 +211,12 @@ export const optimisticCourseUpdate = (
           if (draft?.data) {
             const courseIndex = draft.data.findIndex((course: any) => course._id === courseId);
             if (courseIndex !== -1) {
-              const originalData = { ...draft.data[courseIndex] };
               Object.assign(draft.data[courseIndex], updateData);
-
-              // Store rollback action
-              rollbackActions.push(() => {
-                dispatch(
-                  courseApi.util.updateQueryData('getCreatorCourse', { id: creatorId }, (draft) => {
-                    if (draft?.data) {
-                      const courseIndex = draft.data.findIndex((course: any) => course._id === courseId);
-                      if (courseIndex !== -1) {
-                        Object.assign(draft.data[courseIndex], originalData);
-                      }
-                    }
-                  }) as any
-                );
-              });
             }
           }
         }) as any
       );
+      rollbackActions.push(() => patchResult2.undo());
     }
 
     return {

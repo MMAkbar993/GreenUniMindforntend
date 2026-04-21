@@ -404,21 +404,13 @@ export const courseApi = baseApi.injectEndpoints({
     }),
     editCourse: builder.mutation<
       { data: Course },
-      { id: string; data: FormData; file?: File; creatorId?: string }
+      { id: string; data: FormData; creatorId?: string }
     >({
       query: (args) => {
-        // Use the FormData directly as it's already properly formatted
-        const formData = args.data;
-
-        // Add thumbnail if provided and not already in FormData
-        if (args.file && !formData.has("file")) {
-          formData.append("file", args.file);
-        }
-
         return {
           url: `/courses/edit-course/${args.id}`,
           method: "PATCH",
-          body: formData,
+          body: args.data,
           formData: true, // This signals to use FormData
         };
       },

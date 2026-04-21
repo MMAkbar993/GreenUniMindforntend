@@ -524,7 +524,6 @@ const EditCourse = () => {
       const res = await editCourse({
         id: courseId,
         data: formData,
-        file: values.courseThumbnail,
         creatorId: data?.data?._id, // Pass creator ID for proper cache invalidation
       }).unwrap();
 
