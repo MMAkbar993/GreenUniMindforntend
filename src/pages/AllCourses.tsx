@@ -116,7 +116,7 @@ const AllCourses = () => {
     );
 
     if (isAlreadyEnrolled) {
-      navigate(`/courses/${course._id}`);
+      navigate(`/student/course/${course._id}`);
       return;
     }
 

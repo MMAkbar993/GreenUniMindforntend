@@ -37,7 +37,25 @@ const UdemyStyleCourseCard = ({
 }: UdemyStyleCourseCardProps) => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { data: userData } = useGetMeQuery(undefined);
+  const { data: userData } = useGetMeQuery(undefined, { refetchOnMountOrArgChange: true });
+
+  const getEnrolledCourseId = (enrolledCourse: unknown): string => {
+    if (typeof enrolledCourse === "string") return enrolledCourse;
+    if (!enrolledCourse || typeof enrolledCourse !== "object") return "";
+
+    const raw = enrolledCourse as {
+      courseId?: string | { _id?: string };
+      _id?: string;
+    };
+
+    if (typeof raw.courseId === "string") return raw.courseId;
+    if (raw.courseId && typeof raw.courseId === "object" && typeof raw.courseId._id === "string") {
+      return raw.courseId._id;
+    }
+    if (typeof raw._id === "string") return raw._id;
+
+    return "";
+  };
 
   const handleEnroll = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -49,12 +67,12 @@ const UdemyStyleCourseCard = ({
 
     // Check if student is already enrolled in this course
     const isAlreadyEnrolled = userData?.data?.enrolledCourses?.some(
-      (enrolledCourse: IEnrolledCourse) =>
-        enrolledCourse.courseId === course._id
+      (enrolledCourse: IEnrolledCourse | string | { _id?: string; courseId?: string | { _id?: string } }) =>
+        getEnrolledCourseId(enrolledCourse) === course._id
     );
 
     if (isAlreadyEnrolled) {
-      toast.error("You are already enrolled in this course");
+      navigate(`/student/course/${course._id}`);
       return;
     }
 
@@ -65,6 +83,11 @@ const UdemyStyleCourseCard = ({
   const handleCardClick = () => {
     navigate(`/courses/${course._id}`);
   };
+
+  const isEnrolled = userData?.data?.enrolledCourses?.some(
+    (enrolledCourse: IEnrolledCourse | string | { _id?: string; courseId?: string | { _id?: string } }) =>
+      getEnrolledCourseId(enrolledCourse) === course._id
+  );
 
   const handleWishlist = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -238,7 +261,7 @@ const UdemyStyleCourseCard = ({
               className="bg-purple-600 hover:bg-purple-700 text-white transition-all duration-200 hover:scale-105"
               onClick={handleEnroll}
             >
-              Enroll Now
+              {isEnrolled ? "Enrolled" : "Enroll Now"}
             </Button>
           )}
         </div>
@@ -250,7 +273,7 @@ const UdemyStyleCourseCard = ({
             className="w-full mt-2 bg-purple-600 hover:bg-purple-700 text-white text-xs transition-all duration-200 hover:scale-105"
             onClick={handleEnroll}
           >
-            Enroll Now
+            {isEnrolled ? "Enrolled" : "Enroll Now"}
           </Button>
         )}
       </div>

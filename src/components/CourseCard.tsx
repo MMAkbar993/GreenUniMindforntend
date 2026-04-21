@@ -68,7 +68,7 @@ const CourseCard = ({
     );
 
     if (isAlreadyEnrolled) {
-      toast.error("You are already enrolled in this course");
+      navigate(`/student/course/${course._id}`);
       return;
     }
 

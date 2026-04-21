@@ -15,6 +15,7 @@ import { getPlainTextFromRichText } from "@/utils/renderRichText";
 
 const CategoryBrowse = () => {
   const getEnrolledCourseId = (enrolledCourse: unknown): string => {
+    if (typeof enrolledCourse === "string") return enrolledCourse;
     if (!enrolledCourse || typeof enrolledCourse !== "object") return "";
 
     const raw = enrolledCourse as {
@@ -35,7 +36,7 @@ const CategoryBrowse = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const [currentPage, setCurrentPage] = useState(1);
-  const { data: userData } = useGetMeQuery(undefined);
+  const { data: userData } = useGetMeQuery(undefined, { refetchOnMountOrArgChange: true });
 
   const { data: categoriesData, isLoading: categoriesLoading } = useGetAllCategoriesWithSubcategoriesQuery();
   
@@ -73,7 +74,7 @@ const CategoryBrowse = () => {
     );
 
     if (isAlreadyEnrolled) {
-      navigate(`/courses/${course._id}`);
+      navigate(`/student/course/${course._id}`);
       return;
     }
 
