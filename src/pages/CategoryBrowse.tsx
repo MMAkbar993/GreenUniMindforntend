@@ -89,7 +89,11 @@ const CategoryBrowse = () => {
     );
 
   const handleCourseClick = (courseId: string) => {
-    navigate(`/courses/${courseId}`);
+    navigate(
+      isCourseEnrolled(courseId)
+        ? `/student/course/${courseId}`
+        : `/courses/${courseId}`
+    );
   };
 
   if (categoriesLoading) {

@@ -594,7 +594,16 @@ const AllCourses = () => {
                         </div>
 
                         {/* Card Content */}
-                        <div className="p-5" onClick={() => navigate(`/courses/${course._id}`)}>
+                        <div
+                          className="p-5"
+                          onClick={() =>
+                            navigate(
+                              isCourseEnrolled(course._id)
+                                ? `/student/course/${course._id}`
+                                : `/courses/${course._id}`
+                            )
+                          }
+                        >
                           <div className="mb-3">
                             <div className="flex items-center mb-2">
                               <div className="flex">

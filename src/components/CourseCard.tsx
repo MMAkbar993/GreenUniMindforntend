@@ -77,7 +77,12 @@ const CourseCard = ({
   };
 
   const handleCardClick = () => {
-    navigate(`/courses/${course._id}`);
+    const isAlreadyEnrolled = userData?.data?.enrolledCourses?.some(
+      (enrolledCourse: IEnrolledCourse | string | { _id?: string; courseId?: string | { _id?: string } }) =>
+        getEnrolledCourseId(enrolledCourse) === course._id
+    );
+
+    navigate(isAlreadyEnrolled ? `/student/course/${course._id}` : `/courses/${course._id}`);
   };
 
   // Calculate total duration from lectures (mock data for now)

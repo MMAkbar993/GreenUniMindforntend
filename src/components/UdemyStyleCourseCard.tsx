@@ -81,7 +81,7 @@ const UdemyStyleCourseCard = ({
   };
 
   const handleCardClick = () => {
-    navigate(`/courses/${course._id}`);
+    navigate(isEnrolled ? `/student/course/${course._id}` : `/courses/${course._id}`);
   };
 
   const isEnrolled = userData?.data?.enrolledCourses?.some(
