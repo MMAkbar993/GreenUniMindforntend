@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/utils/toast";
 import { ICourse, ILecture } from "@/types/course";
 import { formatDuration } from "@/utils/formatTime";
+import { renderCourseDescription } from "@/utils/renderRichText";
 
 import {
   Card,
@@ -355,9 +356,12 @@ const CoursePage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
             <div className="space-y-4 sm:space-y-6">
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800">{course.title}</h2>
-              <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
-                {course.description || "No description available"}
-              </p>
+              <div
+                className="text-base sm:text-lg text-gray-700 leading-relaxed"
+                dangerouslySetInnerHTML={{
+                  __html: renderCourseDescription(course.description)
+                }}
+              />
 
               <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                 <div className="flex items-center bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm">
