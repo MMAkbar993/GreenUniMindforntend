@@ -33,7 +33,25 @@ const CourseCard = ({
 }: CourseCardProps) => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { data: userData } = useGetMeQuery(undefined);
+  const { data: userData } = useGetMeQuery(undefined, { refetchOnMountOrArgChange: true });
+
+  const getEnrolledCourseId = (enrolledCourse: unknown): string => {
+    if (typeof enrolledCourse === "string") return enrolledCourse;
+    if (!enrolledCourse || typeof enrolledCourse !== "object") return "";
+
+    const raw = enrolledCourse as {
+      courseId?: string | { _id?: string };
+      _id?: string;
+    };
+
+    if (typeof raw.courseId === "string") return raw.courseId;
+    if (raw.courseId && typeof raw.courseId === "object" && typeof raw.courseId._id === "string") {
+      return raw.courseId._id;
+    }
+    if (typeof raw._id === "string") return raw._id;
+
+    return "";
+  };
 
   const handleEnroll = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -45,8 +63,8 @@ const CourseCard = ({
 
     // Check if student is already enrolled in this course
     const isAlreadyEnrolled = userData?.data?.enrolledCourses?.some(
-      (enrolledCourse: IEnrolledCourse) =>
-        enrolledCourse.courseId === course._id
+      (enrolledCourse: IEnrolledCourse | string | { _id?: string; courseId?: string | { _id?: string } }) =>
+        getEnrolledCourseId(enrolledCourse) === course._id
     );
 
     if (isAlreadyEnrolled) {
@@ -203,8 +221,14 @@ const CourseCard = ({
               className="w-full bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm px-4 py-2 flex items-center justify-center gap-1"
               onClick={handleEnroll}
             >
-              Enroll Now
-              <ChevronRight className="w-4 h-4" />
+              {userData?.data?.enrolledCourses?.some(
+                (enrolledCourse: IEnrolledCourse | string | { _id?: string; courseId?: string | { _id?: string } }) =>
+                  getEnrolledCourseId(enrolledCourse) === course._id
+              ) ? "Enrolled" : "Enroll Now"}
+              {!userData?.data?.enrolledCourses?.some(
+                (enrolledCourse: IEnrolledCourse | string | { _id?: string; courseId?: string | { _id?: string } }) =>
+                  getEnrolledCourseId(enrolledCourse) === course._id
+              ) && <ChevronRight className="w-4 h-4" />}
             </Button>
           )}
         </div>

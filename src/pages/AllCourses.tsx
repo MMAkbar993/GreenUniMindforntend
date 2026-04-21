@@ -32,6 +32,7 @@ import { getPlainTextFromRichText } from '@/utils/renderRichText';
 
 const AllCourses = () => {
   const getEnrolledCourseId = (enrolledCourse: unknown): string => {
+    if (typeof enrolledCourse === 'string') return enrolledCourse;
     if (!enrolledCourse || typeof enrolledCourse !== 'object') return '';
 
     const raw = enrolledCourse as {
@@ -62,7 +63,7 @@ const AllCourses = () => {
   const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
 
   const { data: courses, isLoading, isError } = useGetPublishedCoursesQuery(undefined);
-  const { data: userData } = useGetMeQuery(undefined);
+  const { data: userData } = useGetMeQuery(undefined, { refetchOnMountOrArgChange: true });
 
   // Update search term when URL changes
   useEffect(() => {
