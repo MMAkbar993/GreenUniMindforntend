@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useLocation } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import { FaFacebook, FaApple } from "react-icons/fa";
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -18,34 +17,12 @@ const SocialLoginButtons = ({
   role = "student",
   className,
 }: SocialLoginButtonsProps) => {
-  const location = useLocation();
   const isMobile = useMediaQuery("(max-width: 640px)");
-
-  // Get the current URL to determine if we're on login or signup page
-  const isLoginPage = location.pathname.includes("login");
-  const isSignUpPage = location.pathname.includes("sign-up");
-
-  // Base URL for OAuth endpoints
   const baseUrl = config.apiBaseUrl;
 
-  // Function to handle OAuth login
   const handleOAuthLogin = (provider: string) => {
-    // Determine if this is for account linking
-    const isLinking = false;
-
-    // Store the requested role in localStorage to verify it after login
     localStorage.setItem("oauthRequestedRole", role);
-
-    // Log the role being used
-    console.log(`OAuth login with ${provider} using role:`, role);
-
-    // Construct the OAuth URL with appropriate query parameters
-    const oauthUrl = `${baseUrl}/oauth/${provider}?role=${role}&linking=${isLinking}`;
-
-    console.log("Redirecting to OAuth URL:", oauthUrl);
-
-    // Redirect to the OAuth provider
-    window.location.href = oauthUrl;
+    window.location.href = `${baseUrl}/oauth/${provider}?role=${role}&linking=false`;
   };
 
   return (

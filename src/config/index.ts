@@ -33,12 +33,7 @@ export const config: IConfig = {
       redirectUri: import.meta.env.VITE_APPLE_REDIRECT_URI,
     },
   },
-  apiBaseUrl: (() => {
-    const url = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : '');
-    if (!url) return '';
-    const trimmed = url.replace(/\/+$/, '');
-    return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
-  })(),
+  apiBaseUrl: import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, '') || (import.meta.env.DEV ? 'http://localhost:5001/api' : ''),
   wsBaseUrl: import.meta.env.VITE_WS_BASE_URL || import.meta.env.VITE_API_BASE_URL?.replace('http', 'ws') || 'ws://localhost:5000',
   node_env: import.meta.env.VITE_NODE_ENV!,
 };

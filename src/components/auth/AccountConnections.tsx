@@ -35,9 +35,8 @@ const AccountConnections = () => {
   const [unlinkProvider, setUnlinkProvider] = useState<string | null>(null);
   const [unlinkDialogOpen, setUnlinkDialogOpen] = useState(false);
 
-  // Base URL for OAuth endpoints
-  // Extract the base URL without the /api/v1 suffix for OAuth endpoints
-  const baseUrl = config.apiBaseUrl.replace(/\/api\/v1$/, "");
+  // Base URL for OAuth endpoints (same as API base)
+  const baseUrl = config.apiBaseUrl;
 
   // State for debug panel
   const [showDebug, setShowDebug] = useState(false);
@@ -154,9 +153,7 @@ const AccountConnections = () => {
     const userRole = effectiveUser.role ||
       (effectiveUser.user && typeof effectiveUser.user === 'object' ? effectiveUser.user.role : 'student');
 
-    // Construct the OAuth URL with the correct path
-    // Add the token as a query parameter for the backend to use
-    const oauthUrl = `${baseUrl}/api/v1/oauth/${provider}?role=${userRole}&linking=true${accessToken ? `&token=${accessToken}` : ''}`;
+    const oauthUrl = `${baseUrl}/oauth/${provider}?role=${userRole}&linking=true`;
 
     console.log("Redirecting to OAuth URL:", oauthUrl);
 
@@ -380,7 +377,7 @@ const AccountConnections = () => {
               <h3 className="font-bold mb-2">Debug Information</h3>
               <p className="mb-1"><strong>Base URL:</strong> {baseUrl}</p>
               <p className="mb-1"><strong>API Base URL:</strong> {baseUrl}</p>
-              <p className="mb-1"><strong>OAuth URL Example:</strong> {`${baseUrl}/api/v1/oauth/google?role=${effectiveUser?.role || 'student'}&linking=true`}</p>
+              <p className="mb-1"><strong>OAuth URL Example:</strong> {`${baseUrl}/oauth/google?role=${effectiveUser?.role || 'student'}&linking=true`}</p>
               <p className="mb-3"><strong>User ID:</strong> {getUserId(effectiveUser) || 'Not found'}</p>
 
               <details>
