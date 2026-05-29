@@ -97,6 +97,11 @@ const EditUserPhoto = () => {
   }, [updateSuccess]);
 
   const handleUpdateUser = async (values: z.infer<typeof formSchema>) => {
+    if (!(values.photoUrl instanceof File)) {
+      toast.error("Please select a photo to upload");
+      return;
+    }
+
     const toastId = toast.loading("Updating profile photo...");
 
     try {
@@ -105,18 +110,19 @@ const EditUserPhoto = () => {
       }
 
       const formData = new FormData();
-
-      // Only append the file if it's a new file being uploaded
-      if (values.photoUrl instanceof File) {
-        formData.append("file", values.photoUrl);
-      }
+      formData.append("file", values.photoUrl);
 
       const res = await updateUserProfile({
         id: user._id,
         data: formData,
       });
 
-      const userData = res.data.data;
+      if ("error" in res) {
+        const err = res.error as { data?: { message?: string } };
+        throw new Error(err?.data?.message || "Failed to update profile photo");
+      }
+
+      const userData = res.data?.data;
 
       if (userData) {
         dispatch(setUser({ user: userData, token }));
@@ -128,9 +134,10 @@ const EditUserPhoto = () => {
       });
     } catch (error) {
       console.error("Error updating profile photo:", error);
-      toast.error("Failed to update profile photo", {
-        id: toastId,
-      });
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update profile photo",
+        { id: toastId }
+      );
     }
   };
 
