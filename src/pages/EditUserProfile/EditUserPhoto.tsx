@@ -110,7 +110,7 @@ const EditUserPhoto = () => {
       }
 
       const formData = new FormData();
-      formData.append("file", values.photoUrl);
+      formData.append("profileImg", values.photoUrl);
 
       const res = await updateUserProfile({
         id: user._id,
