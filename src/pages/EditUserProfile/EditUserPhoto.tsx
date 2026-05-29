@@ -102,19 +102,36 @@ const EditUserPhoto = () => {
       return;
     }
 
-    const toastId = toast.loading("Updating profile photo...");
+    const toastId = toast.loading("Uploading photo...");
 
     try {
       if (!user?._id) {
         throw new Error("User ID not found");
       }
 
-      const formData = new FormData();
-      formData.append("profileImg", values.photoUrl);
+      const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+      const uploadPreset = import.meta.env.VITE_CLOUDINARY_PRESET;
+
+      const cloudinaryForm = new FormData();
+      cloudinaryForm.append("file", values.photoUrl);
+      cloudinaryForm.append("upload_preset", uploadPreset);
+
+      const cloudinaryRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        { method: "POST", body: cloudinaryForm }
+      );
+
+      if (!cloudinaryRes.ok) {
+        throw new Error("Failed to upload photo to cloud storage");
+      }
+
+      const { secure_url } = await cloudinaryRes.json();
+
+      toast.loading("Saving profile photo...", { id: toastId });
 
       const res = await updateUserProfile({
         id: user._id,
-        data: formData,
+        data: { profileImg: secure_url },
       });
 
       if ("error" in res) {
@@ -129,9 +146,7 @@ const EditUserPhoto = () => {
       }
 
       setUpdateSuccess(true);
-      toast.success("Profile photo updated successfully!", {
-        id: toastId,
-      });
+      toast.success("Profile photo updated successfully!", { id: toastId });
     } catch (error) {
       console.error("Error updating profile photo:", error);
       toast.error(
