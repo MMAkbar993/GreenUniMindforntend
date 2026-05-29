@@ -10,6 +10,7 @@ import { NuqsAdapter } from "nuqs/adapters/react";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { initializeSecurity } from "@/config/security";
 import { useEffect } from "react";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 
 const queryClient = new QueryClient();
 
@@ -21,23 +22,25 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <Provider store={store}>
-        <PersistGate loading={null} persistor={persistor}>
-          <QueryClientProvider client={queryClient}>
-            <TooltipProvider>
-              <NuqsAdapter>
-                <RouterProvider
-                  router={router}
-                  future={{
-                    v7_startTransition: true,
-                  }}
-                />
-                <Sonner />
-              </NuqsAdapter>
-            </TooltipProvider>
-          </QueryClientProvider>
-        </PersistGate>
-      </Provider>
+      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+        <Provider store={store}>
+          <PersistGate loading={null} persistor={persistor}>
+            <QueryClientProvider client={queryClient}>
+              <TooltipProvider>
+                <NuqsAdapter>
+                  <RouterProvider
+                    router={router}
+                    future={{
+                      v7_startTransition: true,
+                    }}
+                  />
+                  <Sonner />
+                </NuqsAdapter>
+              </TooltipProvider>
+            </QueryClientProvider>
+          </PersistGate>
+        </Provider>
+      </GoogleOAuthProvider>
     </ErrorBoundary>
   );
 }

@@ -113,6 +113,8 @@ export const SecurityConfig = {
         "'self'",
         'https://api.stripe.com',
         'https://generativelanguage.googleapis.com',
+        'https://api.cloudinary.com',
+        'https://www.googleapis.com',
         'wss:',
         'ws:',
         ...getBackendUrls()

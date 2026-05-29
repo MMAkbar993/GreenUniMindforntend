@@ -279,6 +279,16 @@ export const authApi = baseApi.injectEndpoints({
       }),
     }),
 
+    // Google OAuth login (frontend-initiated)
+    googleLogin: builder.mutation({
+      query: (data) => ({
+        url: "/auth/google-login",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["getMe"],
+    }),
+
     // OAuth account management
     linkOAuthAccount: builder.mutation({
       query: (data) => ({
@@ -359,6 +369,8 @@ export const {
   useChangePasswordMutation,
   useForgotPasswordMutation,
   useResetPasswordMutation,
+  // Google OAuth login hook
+  useGoogleLoginMutation,
   // OAuth account management hooks
   useLinkOAuthAccountMutation,
   useUnlinkOAuthAccountMutation,
